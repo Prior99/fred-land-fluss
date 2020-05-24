@@ -15,7 +15,7 @@ tsdi.enableComponentScanner();
 
 ReactDOM.render(
     <div className="App">
-        <Background className="App__background" floating={false}/>
+        <Background className="App__background"/>
         <div className="App__main">
             <Router history={tsdi.get("history")}>
                 <Switch>
