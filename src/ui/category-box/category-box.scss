@@ -9,20 +9,22 @@
 
     &__untouched {
         position: absolute;
-        top: 5px;
-        right: 5px;
+        top: 8px;
+        right: 8px;
+        display: flex;
     }
 
     &__dot {
-        width: 5px;
-        height: 5px;
+        width: 8px;
+        height: 8px;
         transition: background 0.5s ease-in-out;
         background: transparent;
-        border: 1px solid rgba(0,0,0,.87);
-        border-radius: 5px;;
+        border: 1px solid #1a69a4;
+        border-radius: 8px;
+        margin: 0 2px;
 
         &--touched {
-            background:  rgba(0,0,0,.87);
+            background:  #2185d0;
         }
     }
 }
