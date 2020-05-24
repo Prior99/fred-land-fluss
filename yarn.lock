@@ -6029,6 +6029,11 @@ typedarray@^0.0.6:
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
   integrity sha1-hnrHTjhkGHsdPUfZlqeOxciDB3c=
 
+typescript-debounce-decorator@^0.0.17:
+  version "0.0.17"
+  resolved "https://registry.yarnpkg.com/typescript-debounce-decorator/-/typescript-debounce-decorator-0.0.17.tgz#92f971e23de2f0ca3c3100419d59337b5e455575"
+  integrity sha512-W798VrXGMIV/ATm5OjEWbYX2quaOcBLYmNeVJOvccwen52KGRMsymj32mty29vq2l60PWYBmYchsV9hrNI6x4w==
+
 typescript@^3.9.3:
   version "3.9.3"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.9.3.tgz#d3ac8883a97c26139e42df5e93eeece33d610b8a"

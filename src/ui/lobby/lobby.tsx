@@ -1,6 +1,6 @@
 import * as React from "react";
 import { external, inject } from "tsdi";
-import { Segment, Form, Input, Popup, Message, Grid, List } from "semantic-ui-react";
+import { Segment, Form, Input, Popup, Message, Grid, List, Button, TableHeader } from "semantic-ui-react";
 import { computed, action } from "mobx";
 import { observer } from "mobx-react";
 import { MenuContainer } from "../../ui";
@@ -56,6 +56,18 @@ export class Lobby extends React.Component<LobbyProps> {
         this.game.changeName(name);
     }
 
+    @action.bound private handleCategoryChange(value: string, index: number): void {
+        this.game.changeCategory(index, value);
+    }
+
+    @action.bound private handleCategoryDelete(index: number): void {
+        this.game.deleteCategory(index);
+    }
+
+    @action.bound private handleCategoryAdd(value: string): void {
+        this.game.changeCategory(this.game.config.categories.length, value);
+    }
+
     public render(): JSX.Element {
         return (
             <MenuContainer className={this.props.className}>
@@ -71,27 +83,104 @@ export class Lobby extends React.Component<LobbyProps> {
                                 </List>
                                 <h2>Options</h2>
                                 <Form>
-                                    <Form.Field error={!this.nameValid}>
-                                        <label>Change name</label>
-                                        <Input value={this.game.userName} onChange={this.handleNameChange} />
-                                    </Form.Field>
-                                    {this.isHost ? (
-                                        <>
-                                            <Form.Button
-                                                icon="play circle"
-                                                labelPosition="left"
-                                                primary
-                                                fluid
-                                                className="Lobby__startButton"
-                                                onClick={this.handleStartClick}
-                                                content="Start"
-                                            />
-                                        </>
-                                    ) : (
-                                        <p>
-                                            Please wait <b>patiently</b> for the host to start the game...
-                                        </p>
-                                    )}
+                                    <Grid>
+                                        <Grid.Row>
+                                            <Grid.Column>
+                                                <Form.Field error={!this.nameValid}>
+                                                    <label>Change name</label>
+                                                    <Input
+                                                        value={this.game.userName}
+                                                        onChange={this.handleNameChange}
+                                                    />
+                                                </Form.Field>
+                                            </Grid.Column>
+                                        </Grid.Row>
+
+                                        <Grid.Row>
+                                            {this.game.config.categories.map((category, index) => (
+                                                <Grid.Column key={index} computer="8" mobile="16">
+                                                    {this.isHost ? (
+                                                        <Form.Group inline>
+                                                            <Form.Field error={category.length === 0}>
+                                                                <label>Category {index + 1}</label>
+                                                                <Input
+                                                                    ref={(input) => index === this.game.config.categories.length -1 && input && input.focus()}
+                                                                    value={category}
+                                                                    onChange={(evt) =>
+                                                                        this.handleCategoryChange(
+                                                                            evt.currentTarget.value,
+                                                                            index,
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </Form.Field>
+                                                            <Form.Field>
+                                                                <label>Delete</label>
+                                                                <Button
+                                                                    icon="trash"
+                                                                    disabled={!this.isHost}
+                                                                    onClick={() => this.handleCategoryDelete(index)}
+                                                                />
+                                                            </Form.Field>
+                                                        </Form.Group>
+                                                    ) : (
+                                                        <Segment key={index} style={{ marginBottom: 10 }}>
+                                                            <Form.Field error={category.length === 0}>
+                                                                <label>Category {index + 1}</label>
+                                                                <p>{category}</p>
+                                                            </Form.Field>
+                                                        </Segment>
+                                                    )}
+                                                </Grid.Column>
+                                            ))}
+                                            {this.isHost && (
+                                                <Grid.Column
+                                                    key={this.game.config.categories.length}
+                                                    computer="8"
+                                                    mobile="16"
+                                                >
+                                                    <Form.Group inline>
+                                                        <Form.Field>
+                                                            <label>
+                                                                Category {this.game.config.categories.length + 1}
+                                                            </label>
+                                                            <Input
+                                                                value=""
+                                                                onChange={(evt) =>
+                                                                    this.handleCategoryAdd(evt.currentTarget.value)
+                                                                }
+                                                            />
+                                                        </Form.Field>
+                                                        <Form.Field>
+                                                            <label>Delete</label>
+                                                            <Button icon="trash" disabled />
+                                                        </Form.Field>
+                                                    </Form.Group>
+                                                </Grid.Column>
+                                            )}
+                                        </Grid.Row>
+                                        <Grid.Row>
+                                            <Grid.Column>
+                                                {this.isHost ? (
+                                                    <Form.Field>
+                                                        <Form.Button
+                                                            icon="play circle"
+                                                            labelPosition="left"
+                                                            primary
+                                                            fluid
+                                                            className="Lobby__startButton"
+                                                            onClick={this.handleStartClick}
+                                                            content="Start"
+                                                        />
+                                                    </Form.Field>
+                                                ) : (
+                                                    <p>
+                                                        Please wait <b>patiently</b> for the host to start the game...
+                                                    </p>
+                                                )}
+                                            </Grid.Column>
+                                        </Grid.Row>
+                                    </Grid>
                                 </Form>
                             </Segment>
                         </Grid.Column>

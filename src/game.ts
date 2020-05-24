@@ -22,6 +22,7 @@ import {
 } from "./types";
 import { v4 } from "uuid";
 import { generateUserName, allLetters } from "./utils";
+import { debounce } from "typescript-debounce-decorator";
 
 export interface Score {
     rank: number;
@@ -41,7 +42,7 @@ export const enum LoadingFeatures {
 @component
 export class Game {
     public peer: Peer<AppUser, MessageType> | undefined;
-    
+
     @observable public config: GameConfig = {
         seed: v4(),
         categories: ["Stadt", "Land", "Fluss"],
@@ -62,7 +63,7 @@ export class Game {
 
     @observable public currentLetter = Letter.A;
     @observable public usedLetters = new Set<Letter>();
-    
+
     private rng?: RandomSeed;
 
     private messageWelcome?: MessageFactory<MessageType, MessageWelcome>;
@@ -77,7 +78,6 @@ export class Game {
     @computed public get userName(): string {
         return this.user?.name ?? "";
     }
-
 
     @computed public get solution(): Map<string, string> | undefined {
         return this.solutions.get(this.userId);
@@ -111,11 +111,11 @@ export class Game {
         return this.scoreList.find((entry) => entry.playerId === playerId)?.rank ?? 0;
     }
 
-    @action.bound changeName(newName: string) {
+    public changeName(newName: string) {
         this.peer?.updateUser({ name: newName });
     }
 
-    @action.bound public async sendStartGame(): Promise<void> {
+   public async sendStartGame(): Promise<void> {
         if (!this.messageStartGame) {
             throw new Error("Network not initialized.");
         }
@@ -124,14 +124,14 @@ export class Game {
         this.loading.delete(LoadingFeatures.START_GAME);
     }
 
-    @action.bound public changeConfig(config: GameConfig): void {
+    @debounce(200) public sendChangeConfig(): void {
         if (!this.messageChangeConfig) {
             throw new Error("Network not initialized.");
         }
-        this.messageChangeConfig.send({ config });
+        this.messageChangeConfig.send({ config: this.config });
     }
 
-    @action.bound public async sendNextRound(): Promise<void> {
+    public async sendNextRound(): Promise<void> {
         if (!this.messageNextRound) {
             throw new Error("Network not initialized.");
         }
@@ -140,7 +140,7 @@ export class Game {
         this.loading.delete(LoadingFeatures.NEXT_ROUND);
     }
 
-    @action.bound public async sendEndRound(): Promise<void> {
+    public async sendEndRound(): Promise<void> {
         if (!this.messageEndRound) {
             throw new Error("Network not initialized.");
         }
@@ -149,14 +149,14 @@ export class Game {
         this.loading.delete(LoadingFeatures.END_ROUND);
     }
 
-    @action.bound public sendSolution(): void {
+    public sendSolution(): void {
         if (!this.messageSolution) {
             throw new Error("Network not initialized.");
         }
         this.messageSolution.send({ solution: Array.from(this.solution?.entries() ?? []) });
     }
 
-    @action.bound public async sendScoreWord(userId: string, category: string, scoreType: ScoreType): Promise<void> {
+    public async sendScoreWord(userId: string, category: string, scoreType: ScoreType): Promise<void> {
         if (!this.messageScoreWord) {
             throw new Error("Network not initialized.");
         }
@@ -165,7 +165,7 @@ export class Game {
         this.loading.delete(LoadingFeatures.SCORE_WORD);
     }
 
-    @action.bound public async sendAcceptSolutions(): Promise<void> {
+    public async sendAcceptSolutions(): Promise<void> {
         if (!this.messageAcceptSolutions) {
             throw new Error("Network not initialized.");
         }
@@ -173,6 +173,20 @@ export class Game {
         await this.messageAcceptSolutions.send({}).waitForAll();
         this.loading.delete(LoadingFeatures.ACCEPT_SOLUTIONS);
     }
+
+    @action.bound public changeCategory(index: number, newName: string): void {
+        this.config.categories[index] = newName;
+
+        this.sendChangeConfig();
+    }
+
+   
+    @action.bound public deleteCategory(index: number): void {
+        this.config.categories.splice(index, 1);
+
+        this.sendChangeConfig();
+    }
+
 
     @computed public get validation(): Validation {
         const categoryErrors = new Map<string, string>();
@@ -302,7 +316,7 @@ export class Game {
         this.messageWelcome.subscribe(({ config }) => {
             this.config = config;
 
-            for(const user of this.peer?.users ?? []) {
+            for (const user of this.peer?.users ?? []) {
                 this.users.set(user.id, user);
             }
         });
@@ -345,7 +359,7 @@ export class Game {
             this.state = GameState.SCORES;
         });
 
-        for(const user of this.peer.users) {
+        for (const user of this.peer.users) {
             this.users.set(user.id, user);
         }
         this.userId = this.peer.userId;
