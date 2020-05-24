@@ -11,8 +11,10 @@ import { MenuContainer } from "../../ui";
 
 declare const SOFTWARE_VERSION: string;
 
+export interface PageMainMenuProps {}
+
 @observer
-export class PageMainMenu extends React.Component<RouteProps<{}>> {
+export class PageMainMenu extends React.Component<RouteProps<PageMainMenuProps>> {
     @observable private otherId = "";
     @observable private activeTab = 0;
 
@@ -81,7 +83,7 @@ export class PageMainMenu extends React.Component<RouteProps<{}>> {
     }
 }
 
-export const routeMainMenu: Route<{}> = addRoute({
+export const routeMainMenu: Route<PageMainMenuProps> = addRoute({
     path: () => "/main-menu",
     pattern: "/main-menu",
     component: PageMainMenu,

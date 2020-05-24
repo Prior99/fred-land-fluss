@@ -1,6 +1,6 @@
 import * as React from "react";
 import { external, inject } from "tsdi";
-import { Segment, Form, Input, Popup, Message, Grid, List, Button, TableHeader } from "semantic-ui-react";
+import { Segment, Form, Input, Popup, Message, Grid, List, Button } from "semantic-ui-react";
 import { computed, action, observable } from "mobx";
 import { observer } from "mobx-react";
 import { MenuContainer } from "..";

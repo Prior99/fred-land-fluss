@@ -28,7 +28,7 @@ export class CategoryBox extends React.Component<CategoryBoxProps> {
         return this.game.getWord(this.game.userId, this.category);
     }
 
-    @action.bound private handleChangeWord(evt: React.SyntheticEvent<HTMLInputElement>) {
+    @action.bound private handleChangeWord(evt: React.SyntheticEvent<HTMLInputElement>): void {
         this.game.setWord(this.game.userId, this.category, evt.currentTarget.value);
     }
 

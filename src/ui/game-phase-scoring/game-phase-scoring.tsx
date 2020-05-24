@@ -17,7 +17,7 @@ export class GamePhaseScoring extends React.Component {
         return this.game.loading.has(LoadingFeatures.ACCEPT_SOLUTIONS);
     }
 
-    @action.bound private handleSubmit(evt: React.SyntheticEvent<HTMLFormElement>): void {
+    @action.bound private handleSubmit(_evt: React.SyntheticEvent<HTMLFormElement>): void {
         this.game.sendAcceptSolutions();
     }
 

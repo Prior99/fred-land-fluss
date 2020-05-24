@@ -4,7 +4,7 @@ import { observer } from "mobx-react";
 import { external, inject } from "tsdi";
 import { Game } from "../../game";
 import { computed, action } from "mobx";
-import { Card, Input, Form, Table, Dropdown } from "semantic-ui-react";
+import { Table, Dropdown } from "semantic-ui-react";
 import "./word-scorer.scss";
 import { ScoreType } from "../../types";
 
@@ -31,7 +31,7 @@ export class WordScorer extends React.Component<WordScorerProps> {
         return this.game.getScore(this.props.userId, this.props.category);
     }
 
-    @action.bound private handleChangeScoring(value: ScoreType) {
+    @action.bound private handleChangeScoring(value: ScoreType): void {
         this.game.sendScoreWord(this.props.userId, this.props.category, value);
     }
 
