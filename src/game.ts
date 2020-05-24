@@ -299,7 +299,13 @@ export class Game {
         this.messageScoreWord = this.peer.message<MessageScoreWord>(MessageType.SCORE_WORD);
         this.messageAcceptSolutions = this.peer.message<MessageAcceptSolutions>(MessageType.ACCEPT_SOLUTIONS);
 
-        this.messageWelcome.subscribe(({ config }) => (this.config = config));
+        this.messageWelcome.subscribe(({ config }) => {
+            this.config = config;
+
+            for(const user of this.peer?.users ?? []) {
+                this.users.set(user.id, user);
+            }
+        });
         this.messageChangeConfig.subscribe(({ config }) => (this.config = config));
         this.messageStartGame.subscribe(({ config }) => {
             this.config = config;
