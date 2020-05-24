@@ -12,7 +12,15 @@ export class GamePhaseCountdown extends React.Component {
     public render(): JSX.Element {
         return (
             <div className="GamePhaseCountdown">
+                <div className="GamePhaseCountdown__container">
+                    <div className="GamePhaseCountdown__character GamePhaseCountdown__character--1"></div>
+                    <div className="GamePhaseCountdown__character GamePhaseCountdown__character--2"></div>
+                    <div className="GamePhaseCountdown__character GamePhaseCountdown__character--3"></div>
+                    <div className="GamePhaseCountdown__character GamePhaseCountdown__character--letter">
+                        {this.game.currentLetter.toUpperCase()}
+                    </div>
+                </div>
             </div>
-        )
+        );
     }
 }

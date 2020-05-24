@@ -15,7 +15,8 @@ export const enum MessageType {
     END_ROUND = "end round",
     SOLUTION = "solution",
     SCORE_WORD = "score word",
-    ACCEPT_SOLUTIONS = "accept solutions"
+    ACCEPT_SOLUTIONS = "accept solutions",
+    TOUCH_CATEGORY = "touch category",
 }
 
 export interface MessageWelcome {
@@ -30,11 +31,9 @@ export interface MessageStartGame {
     config: GameConfig;
 }
 
-export interface MessageNextRound {
-}
+export interface MessageNextRound {}
 
-export interface MessageEndRound {
-}
+export interface MessageEndRound {}
 
 export interface MessageSolution {
     solution: [string, string][];
@@ -46,5 +45,8 @@ export interface MessageScoreWord {
     scoreType: ScoreType;
 }
 
-export interface MessageAcceptSolutions {
+export interface MessageAcceptSolutions {}
+
+export interface MessageTouchCategory {
+    category: string;
 }

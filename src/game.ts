@@ -18,6 +18,7 @@ import {
     ScoreType,
     Validation,
     Letter,
+    MessageTouchCategory,
 } from "./types";
 import { v4 } from "uuid";
 import { generateUserName, allLetters } from "./utils";
@@ -61,6 +62,7 @@ export class Game {
 
     @observable public solutions = new Map<string, Map<string, string>>();
     @observable public currentScores = new Map<string, Map<string, ScoreType>>();
+    @observable public touchedCategories = new Map<string, Set<string>>();
 
     @observable public currentLetter = Letter.A;
     @observable public usedLetters = new Set<Letter>();
@@ -75,6 +77,7 @@ export class Game {
     private messageSolution?: MessageFactory<MessageType, MessageSolution>;
     private messageScoreWord?: MessageFactory<MessageType, MessageScoreWord>;
     private messageAcceptSolutions?: MessageFactory<MessageType, MessageAcceptSolutions>;
+    private messageTouchCategory?: MessageFactory<MessageType, MessageTouchCategory>;
 
     @computed public get userName(): string {
         return this.user?.name ?? "";
@@ -116,7 +119,7 @@ export class Game {
         this.peer?.updateUser({ name: newName });
     }
 
-   public async sendStartGame(): Promise<void> {
+    public async sendStartGame(): Promise<void> {
         if (!this.messageStartGame) {
             throw new Error("Network not initialized.");
         }
@@ -157,6 +160,13 @@ export class Game {
         this.messageSolution.send({ solution: Array.from(this.solution?.entries() ?? []) });
     }
 
+    public sendTouchCategory(category: string): void {
+        if (!this.messageTouchCategory) {
+            throw new Error("Network not initialized.");
+        }
+        this.messageTouchCategory.send({ category });
+    }
+
     public async sendScoreWord(userId: string, category: string, scoreType: ScoreType): Promise<void> {
         if (!this.messageScoreWord) {
             throw new Error("Network not initialized.");
@@ -181,13 +191,11 @@ export class Game {
         this.sendChangeConfig();
     }
 
-   
     @action.bound public deleteCategory(index: number): void {
         this.config.categories.splice(index, 1);
 
         this.sendChangeConfig();
     }
-
 
     @computed public get validation(): Validation {
         const categoryErrors = new Map<string, string>();
@@ -227,7 +235,7 @@ export class Game {
         }
         this.currentScores.clear();
         this.currentLetter = Array.from(this.availableLetters.values())[
-            this.rng.intBetween(0, this.availableLetters.size)
+            this.rng.intBetween(0, this.availableLetters.size - 1)
         ];
         this.usedLetters.add(this.currentLetter);
         this.solutions.clear();
@@ -287,16 +295,32 @@ export class Game {
         }
     }
 
+    private hasTouchedCategory(userId: string, category: string): boolean {
+        return this.touchedCategories.get(userId)?.has(category) ?? false;
+    }
+
+    public getUntouched(category: string): number {
+        let result = 0;
+        for (const userId of this.users.keys()) {
+            if (!this.hasTouchedCategory(userId, category)) {
+                result++;
+            }
+        }
+        return result;
+    }
+
+    @action.bound public setWord(userId: string, category: string, word: string): void {
+        if (!this.solutions.has(userId)) {
+            this.solutions.set(userId, new Map());
+        }
+        this.solutions.get(userId)!.set(category, word);
+        if (!this.hasTouchedCategory(userId, category)) {
+            this.sendTouchCategory(category);
+        }
+    }
+
     @computed public get inCountdown(): boolean {
         return this.now < this.deadline;
-    }
-
-    @computed public get showTimer(): boolean {
-        return this.now < this.deadline - 2000;
-    }
-
-    @computed public get showLetter(): boolean {
-        return this.now > this.deadline - 2000 && this.now < this.deadline;
     }
 
     @action.bound public async initialize(networkId?: string): Promise<void> {
@@ -325,6 +349,7 @@ export class Game {
         this.messageSolution = this.peer.message<MessageSolution>(MessageType.SOLUTION);
         this.messageScoreWord = this.peer.message<MessageScoreWord>(MessageType.SCORE_WORD);
         this.messageAcceptSolutions = this.peer.message<MessageAcceptSolutions>(MessageType.ACCEPT_SOLUTIONS);
+        this.messageTouchCategory = this.peer.message<MessageTouchCategory>(MessageType.TOUCH_CATEGORY);
 
         this.messageWelcome.subscribe(({ config }) => {
             this.config = config;
@@ -333,20 +358,28 @@ export class Game {
                 this.users.set(user.id, user);
             }
         });
+        this.messageTouchCategory.subscribe(({ category }, userId) => {
+            if (!this.touchedCategories.has(userId)) {
+                this.touchedCategories.set(userId, new Set());
+            }
+            this.touchedCategories.get(userId)!.add(category);
+        });
         this.messageChangeConfig.subscribe(({ config }) => (this.config = config));
         this.messageStartGame.subscribe(({ config }) => {
             this.config = config;
             this.rng = randomSeed(config.seed);
             this.startTurn();
-            this.deadline = Date.now() + 5000;
+            // this.deadline = Date.now() + 8000;
+            this.touchedCategories.clear();
+            this.deadline = Date.now() + 100;
             const interval = setInterval(() => {
-                this.now = Date.now()
+                this.now = Date.now();
                 if (!this.inCountdown) {
                     clearInterval(interval);
                 }
             }, 200);
 
-            for(const userId of this.users.keys()) {
+            for (const userId of this.users.keys()) {
                 this.totalScores.set(userId, 0);
             }
         });

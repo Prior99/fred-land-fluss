@@ -1,0 +1,28 @@
+.CategoryBox {
+    position: relative;
+
+    &__input {
+        > input {
+            text-transform: uppercase;
+        }
+    }
+
+    &__untouched {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+    }
+
+    &__dot {
+        width: 5px;
+        height: 5px;
+        transition: background 0.5s ease-in-out;
+        background: transparent;
+        border: 1px solid rgba(0,0,0,.87);
+        border-radius: 5px;;
+
+        &--touched {
+            background:  rgba(0,0,0,.87);
+        }
+    }
+}

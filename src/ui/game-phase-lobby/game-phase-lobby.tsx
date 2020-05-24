@@ -4,7 +4,7 @@ import { Segment, Form, Input, Popup, Message, Grid, List, Button, TableHeader }
 import { computed, action } from "mobx";
 import { observer } from "mobx-react";
 import { MenuContainer } from "..";
-import { Game } from "../../game";
+import { Game, LoadingFeatures } from "../../game";
 import "./game-phase-lobby.scss";
 import { NetworkMode } from "p2p-networking";
 
@@ -65,6 +65,10 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
 
     @action.bound private handleCategoryAdd(value: string): void {
         this.game.changeCategory(this.game.config.categories.length, value);
+    }
+
+    @computed private get loading(): boolean {
+        return this.game.loading.has(LoadingFeatures.START_GAME);
     }
 
     public render(): JSX.Element {
@@ -170,6 +174,8 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
                                                             className="Lobby__startButton"
                                                             onClick={this.handleStartClick}
                                                             content="Start"
+                                                            disabled={this.loading}
+                                                            loading={this.loading}
                                                         />
                                                     </Form.Field>
                                                 ) : (
