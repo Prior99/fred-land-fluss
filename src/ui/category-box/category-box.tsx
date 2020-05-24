@@ -6,6 +6,8 @@ import { Game } from "../../game";
 import { computed, action } from "mobx";
 import { Card, Input } from "semantic-ui-react";
 import "./category-box.scss";
+import { GameState } from "../../types";
+import { SolutionScorer } from "../solution-scorer";
 
 export interface CategoryBoxProps {
     category: string;
@@ -38,6 +40,26 @@ export class CategoryBox extends React.Component<CategoryBoxProps> {
         return this.game.getUntouched(this.props.category);
     }
 
+    @computed private get content(): JSX.Element {
+        switch (this.game.state) {
+            case GameState.GUESS:
+                return (
+                    <Input
+                        placeholder={this.game.currentLetter.toUpperCase()}
+                        ref={(input) => this.props.first && input && input.focus()}
+                        className="CategoryBox__input"
+                        value={this.word}
+                        onChange={this.handleChangeWord}
+                        fluid
+                    />
+                );
+            case GameState.SCORING:
+                return <SolutionScorer category={this.category} />;
+            default:
+                return <></>;
+        }
+    }
+
     public render(): JSX.Element {
         const dots: JSX.Element[] = [];
         for (let i = 0; i < this.game.users.size - this.untouched; ++i) {
@@ -50,16 +72,7 @@ export class CategoryBox extends React.Component<CategoryBoxProps> {
             <Card className={this.classNames}>
                 <div className="CategoryBox__untouched">{dots}</div>
                 <Card.Content header={this.props.category} />
-                <Card.Content>
-                    <Input
-                        placeholder={this.game.currentLetter.toUpperCase()}
-                        ref={(input) => this.props.first && input && input.focus()}
-                        className="CategoryBox__input"
-                        value={this.word}
-                        onChange={this.handleChangeWord}
-                        fluid
-                    />
-                </Card.Content>
+                <Card.Content>{this.content}</Card.Content>
             </Card>
         );
     }

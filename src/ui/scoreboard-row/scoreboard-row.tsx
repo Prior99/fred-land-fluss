@@ -36,7 +36,7 @@ export class ScoreboardRow extends React.Component<ScoreboardRowProps> {
             <Table.Row>
                 <Table.Cell className="ScoreboardRow__rank">
                     {this.showRibbon ? (
-                        <Label ribbon className="ScoreboardRow__label" color="green">
+                        <Label ribbon className="ScoreboardRow__label" color="blue">
                             {this.rank}
                         </Label>
                     ) : (

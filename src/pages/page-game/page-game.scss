@@ -1,6 +1,12 @@
 .PageGame {
     display: flex;
-    height: 100%;
+    @media (orientation: landscape) {
+        height: 100%;
+    }
+    @media (orientation: portrait) {
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
     width: 100%;
     align-items: center;
 }

@@ -22,7 +22,6 @@ import {
 } from "./types";
 import { v4 } from "uuid";
 import { generateUserName, allLetters } from "./utils";
-import { debounce } from "typescript-debounce-decorator";
 
 export interface Score {
     rank: number;
@@ -128,7 +127,7 @@ export class Game {
         this.loading.delete(LoadingFeatures.START_GAME);
     }
 
-    @debounce(200) public sendChangeConfig(): void {
+    public sendChangeConfig(): void {
         if (!this.messageChangeConfig) {
             throw new Error("Network not initialized.");
         }
@@ -185,6 +184,10 @@ export class Game {
         this.loading.delete(LoadingFeatures.ACCEPT_SOLUTIONS);
     }
 
+    public getScore(userId: string, category: string): ScoreType {
+        return this.currentScores.get(userId)?.get(category) ?? ScoreType.NONE;
+    }
+
     @action.bound public changeCategory(index: number, newName: string): void {
         this.config.categories[index] = newName;
 
@@ -233,6 +236,7 @@ export class Game {
         if (!this.rng) {
             throw new Error("Game not started.");
         }
+        this.touchedCategories.clear();
         this.currentScores.clear();
         this.currentLetter = Array.from(this.availableLetters.values())[
             this.rng.intBetween(0, this.availableLetters.size - 1)
@@ -250,6 +254,13 @@ export class Game {
             this.solutions.set(id, map);
         }
         this.state = GameState.GUESS;
+        this.deadline = Date.now() + 8000;
+        const interval = setInterval(() => {
+            this.now = Date.now();
+            if (!this.inCountdown) {
+                clearInterval(interval);
+            }
+        }, 200);
     }
 
     public getWord(userId: string, category: string): string {
@@ -284,10 +295,12 @@ export class Game {
                 const word = this.getWord(userId, category);
                 if (!word) {
                     this.setScore(userId, category, ScoreType.NONE);
-                } else if (allWords.size === 1) {
-                    this.setScore(userId, category, ScoreType.ONLY);
                 } else if (allWords.get(word) === 1) {
-                    this.setScore(userId, category, ScoreType.UNIQUE);
+                    if (allWords.size === 1) {
+                        this.setScore(userId, category, ScoreType.ONLY);
+                    } else {
+                        this.setScore(userId, category, ScoreType.UNIQUE);
+                    }
                 } else {
                     this.setScore(userId, category, ScoreType.DUPLICATE);
                 }
@@ -369,16 +382,6 @@ export class Game {
             this.config = config;
             this.rng = randomSeed(config.seed);
             this.startTurn();
-            // this.deadline = Date.now() + 8000;
-            this.touchedCategories.clear();
-            this.deadline = Date.now() + 100;
-            const interval = setInterval(() => {
-                this.now = Date.now();
-                if (!this.inCountdown) {
-                    clearInterval(interval);
-                }
-            }, 200);
-
             for (const userId of this.users.keys()) {
                 this.totalScores.set(userId, 0);
             }

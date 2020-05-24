@@ -1,7 +1,7 @@
 import * as React from "react";
 import { external, inject } from "tsdi";
 import { Segment, Form, Input, Popup, Message, Grid, List, Button, TableHeader } from "semantic-ui-react";
-import { computed, action } from "mobx";
+import { computed, action, observable } from "mobx";
 import { observer } from "mobx-react";
 import { MenuContainer } from "..";
 import { Game, LoadingFeatures } from "../../game";
@@ -16,6 +16,8 @@ export interface GamePhaseLobbyProps {
 @observer
 export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
     @inject private game!: Game;
+
+    @observable private focus = false;
 
     @action.bound private handleStartClick(): void {
         this.game.sendStartGame();
@@ -56,7 +58,12 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
     }
 
     @action.bound private handleCategoryChange(value: string, index: number): void {
+        this.focus = false;
         this.game.changeCategory(index, value);
+    }
+
+    @action.bound private handleUnfocus(): void {
+        this.focus = false;
     }
 
     @action.bound private handleCategoryDelete(index: number): void {
@@ -64,6 +71,7 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
     }
 
     @action.bound private handleCategoryAdd(value: string): void {
+        this.focus = true;
         this.game.changeCategory(this.game.config.categories.length, value);
     }
 
@@ -107,7 +115,14 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
                                                             <Form.Field error={category.length === 0}>
                                                                 <label>Category {index + 1}</label>
                                                                 <Input
-                                                                    ref={(input) => index === this.game.config.categories.length -1 && input && input.focus()}
+                                                                    onUnfocus={this.handleUnfocus}
+                                                                    ref={(input) =>
+                                                                        this.focus &&
+                                                                        index ===
+                                                                            this.game.config.categories.length - 1 &&
+                                                                        input &&
+                                                                        input.focus()
+                                                                    }
                                                                     value={category}
                                                                     onChange={(evt) =>
                                                                         this.handleCategoryChange(
