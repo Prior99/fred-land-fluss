@@ -1,0 +1,18 @@
+@import "../../variables.scss";
+
+.Lobby {
+    &__idMessage {
+        width: 300px;
+        cursor: pointer;
+        border-color: color("secondary1", 4) !important;
+        color: color("secondary1", 0) !important;
+
+        p {
+            font-size: 1rem !important;
+        }
+    }
+
+    &__grid {
+        width: 300px;
+    }
+}

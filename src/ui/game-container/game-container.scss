@@ -1,0 +1,114 @@
+@import "../../variables.scss";
+
+.GameContainer {
+    @media (orientation: landscape) {
+        height: 100%;
+        display: flex;
+        align-items: center;
+    }
+
+    &__container {
+        display: flex;
+        box-sizing: border-box;
+        padding: $gutter / 2;
+        justify-content: center;
+        width: 100%;
+
+        @media (orientation: landscape) {
+            flex-direction: row;
+        }
+        @media (orientation: portrait) {
+            flex-direction: column;
+        }
+    }
+
+    &__mainArea {
+        @media (orientation: landscape) {
+            max-width: 85vh;
+        }
+        @media (orientation: portrait) {
+            width: 100%;
+        }
+
+        flex-grow: 1;
+        flex-shrink: 0;
+
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+
+        box-sizing: border-box;
+    }
+
+    &__boardContainer {
+        padding: $gutter / 2 !important;
+        flex-grow: 1;
+        width: 100%;
+    }
+
+    &__standContainer {
+        padding: $gutter / 2 !important;
+        margin: 0 !important;
+    }
+
+    &__sidebar {
+        flex-grow: 1;
+        flex-shrink: 1;
+        min-width: 150px;
+
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+
+        @media (orientation: landscape) {
+            padding-left: $gutter;
+            max-width: 350px;
+        }
+
+        @media (orientation: portrait) {
+            margin-top: $gutter;
+            padding: $gutter / 2 0;
+        }
+    }
+
+    @mixin container {
+        margin-bottom: $gutter;
+    }
+
+    &__statusContainer {
+        @include container;
+
+        @media (orientation: landscape) {
+            order: 1;
+        }
+
+        @media (orientation: portrait) {
+            order: 3;
+        }
+    }
+
+    &__scoreboardContainer {
+        @include container;
+
+        @media (orientation: landscape) {
+            order: 2;
+        }
+
+        @media (orientation: portrait) {
+            order: 2;
+        }
+    }
+
+    &__actions {
+        @include container;
+
+        @media (orientation: landscape) {
+            order: 3;
+        }
+
+        @media (orientation: portrait) {
+            order: 1;
+        }
+    }
+}
