@@ -1,29 +1,20 @@
 import * as React from "react";
 import { Route, addRoute, RouteProps } from "../../routing";
-import { external, inject } from "tsdi";
 import { Segment, Form, Tab, Input, TabProps } from "semantic-ui-react";
 import { Link } from "react-router-dom";
 import { observable, computed, action } from "mobx";
 import { observer } from "mobx-react";
-import { LobbyMode, AppUser } from "../../types";
+import { LobbyMode } from "../../types";
 import { routeGame } from "../page-game";
 import "./page-main-menu.scss";
 import { MenuContainer } from "../../ui";
-import { Game } from "../../game";
 
 declare const SOFTWARE_VERSION: string;
 
-@external
 @observer
 export class PageMainMenu extends React.Component<RouteProps<{}>> {
-    @inject private game!: Game;
-
     @observable private otherId = "";
     @observable private activeTab = 0;
-
-    @action.bound private handleNameChange(evt: React.SyntheticEvent<HTMLInputElement>): void {
-        alert("Lol");
-    }
 
     @action.bound private handleOtherIdChange(evt: React.SyntheticEvent<HTMLInputElement>): void {
         this.otherId = evt.currentTarget.value;
@@ -33,12 +24,8 @@ export class PageMainMenu extends React.Component<RouteProps<{}>> {
         this.activeTab = activeIndex as number;
     }
 
-    @computed private get nameValid(): boolean {
-        return this.game.userName.length > 0 && this.game.userName.length < 24;
-    }
-
     @computed private get panes(): { menuItem: string }[] {
-        return [{ menuItem: "Join" }, { menuItem: "Host" }];
+        return [{ menuItem: "Host" }, { menuItem: "Join" }];
     }
 
     public render(): JSX.Element {
@@ -50,17 +37,13 @@ export class PageMainMenu extends React.Component<RouteProps<{}>> {
                 </div>
                 <Segment className="PageMainMenu__segment">
                     <Form>
-                        <Form.Field error={!this.nameValid}>
-                            <label>Change name</label>
-                            <Input value={this.game.userName} onChange={this.handleNameChange} />
-                        </Form.Field>
                         <Tab
                             className="PageMainMenu__tab"
                             panes={this.panes}
                             activeIndex={this.activeTab}
                             onTabChange={this.handleTabChange}
                         />
-                        {this.activeTab === 0 && (
+                        {this.activeTab === 1 && (
                             <>
                                 <Form.Field>
                                     <label>Join</label>
@@ -71,7 +54,6 @@ export class PageMainMenu extends React.Component<RouteProps<{}>> {
                                         icon="sign-in"
                                         labelPosition="left"
                                         className="PageMainMenu__button"
-                                        disabled={!this.nameValid}
                                         primary
                                         fluid
                                         content="Join"
@@ -79,14 +61,13 @@ export class PageMainMenu extends React.Component<RouteProps<{}>> {
                                 </Link>
                             </>
                         )}
-                        {this.activeTab === 1 && (
+                        {this.activeTab === 0 && (
                             <Link to={routeGame.path(LobbyMode.HOST)}>
                                 <Form.Button
                                     icon="chess king"
                                     labelPosition="left"
                                     primary
                                     className="PageMainMenu__button"
-                                    disabled={!this.nameValid}
                                     fluid
                                     content="Host"
                                 />

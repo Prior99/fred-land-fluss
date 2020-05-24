@@ -1,14 +1,6 @@
 import * as React from "react";
 import { external, inject } from "tsdi";
-import {
-    Segment,
-    Form,
-    Input,
-    Popup,
-    Message,
-    Grid,
-    List,
-} from "semantic-ui-react";
+import { Segment, Form, Input, Popup, Message, Grid, List } from "semantic-ui-react";
 import { computed, action } from "mobx";
 import { observer } from "mobx-react";
 import { MenuContainer } from "../../ui";
@@ -55,17 +47,13 @@ export class Lobby extends React.Component<LobbyProps> {
         return `Can't copy to clipboard: "${this.connectUrl}".`;
     }
 
-    @computed private get ownUser(): AppUser | undefined {
-        return this.game.user;
-    }
-
     @computed private get nameValid(): boolean {
         return this.game.userName.length > 0 && this.game.userName.length < 24;
     }
 
     @action.bound private handleNameChange(evt: React.SyntheticEvent<HTMLInputElement>): void {
         const name = evt.currentTarget.value;
-        alert("Lol");
+        this.game.changeName(name);
     }
 
     public render(): JSX.Element {
@@ -77,7 +65,7 @@ export class Lobby extends React.Component<LobbyProps> {
                             <Segment>
                                 <h2>Players</h2>
                                 <List as="ul">
-                                    {(this.game.users ?? []).map(({ id, name }) => (
+                                    {this.game.userList.map(({ id, name }) => (
                                         <List.Item as="li" key={id} content={name} />
                                     ))}
                                 </List>

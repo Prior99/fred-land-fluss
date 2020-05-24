@@ -40,22 +40,29 @@ export const enum LoadingFeatures {
 
 @component
 export class Game {
+    public peer: Peer<AppUser, MessageType> | undefined;
+    
     @observable public config: GameConfig = {
         seed: v4(),
         categories: ["Stadt", "Land", "Fluss"],
     };
+
+    @observable public networkMode = NetworkMode.DISCONNECTED;
+    @observable public userId = "";
+
     @observable public state = GameState.LOBBY;
-    @observable.shallow public peer: Peer<AppUser, MessageType> | undefined;
     @observable public turn = 0;
     @observable public totalScores = new Map<string, number>();
     @observable public loading = new Set<LoadingFeatures>();
+
+    @observable public users: Map<string, AppUser> = new Map();
 
     @observable public solutions = new Map<string, Map<string, string>>();
     @observable public currentScores = new Map<string, Map<string, ScoreType>>();
 
     @observable public currentLetter = Letter.A;
     @observable public usedLetters = new Set<Letter>();
-
+    
     private rng?: RandomSeed;
 
     private messageWelcome?: MessageFactory<MessageType, MessageWelcome>;
@@ -71,9 +78,6 @@ export class Game {
         return this.user?.name ?? "";
     }
 
-    @computed public get userId(): string {
-        return this.peer?.userId ?? "";
-    }
 
     @computed public get solution(): Map<string, string> | undefined {
         return this.solutions.get(this.userId);
@@ -91,24 +95,24 @@ export class Game {
             }));
     }
 
-    @computed public get user(): AppUser | undefined {
-        return this.peer?.user;
+    @computed public get userList(): AppUser[] {
+        return Array.from(this.users.values());
     }
 
-    @computed public get users(): AppUser[] | undefined {
-        return this.peer?.users;
+    @computed public get user(): AppUser | undefined {
+        return this.getUser(this.userId);
     }
 
     public getUser(userId: string): AppUser | undefined {
-        return this.users?.find((user) => user.id === userId);
+        return this.users.get(userId);
     }
 
     public getRank(playerId: string): number {
         return this.scoreList.find((entry) => entry.playerId === playerId)?.rank ?? 0;
     }
 
-    @computed public get networkMode(): NetworkMode {
-        return this.peer?.networkMode ?? NetworkMode.DISCONNECTED;
+    @action.bound changeName(newName: string) {
+        this.peer?.updateUser({ name: newName });
     }
 
     @action.bound public async sendStartGame(): Promise<void> {
@@ -253,7 +257,7 @@ export class Game {
     private precalculateScores(): void {
         for (const category of this.config.categories) {
             const allWords = this.getAllWords(category);
-            for (const { id: userId } of this.users ?? []) {
+            for (const { id: userId } of this.users.values()) {
                 const word = this.getWord(userId, category);
                 if (!word) {
                     this.setScore(userId, category, ScoreType.NONE);
@@ -269,6 +273,8 @@ export class Game {
     }
 
     @action.bound public async initialize(networkId?: string): Promise<void> {
+        this.networkMode = NetworkMode.CONNECTING;
+
         const options: PeerOptions<AppUser> = {
             applicationProtocolVersion: "0.0.0",
             peerJsOptions: {
@@ -283,6 +289,7 @@ export class Game {
             typeof networkId === "string"
                 ? await createClient(options, networkId)
                 : await createHost({ ...options, pingInterval: 10 });
+        this.networkMode = this.peer.networkMode;
         this.messageWelcome = this.peer.message<MessageWelcome>(MessageType.WELCOME);
         this.messageChangeConfig = this.peer.message<MessageChangeConfig>(MessageType.CHANGE_CONFIG);
         this.messageStartGame = this.peer.message<MessageStartGame>(MessageType.START_GAME);
@@ -312,7 +319,7 @@ export class Game {
             if (!this.users) {
                 throw new Error("Network not initialized.");
             }
-            if (this.solutions.size === this.users.length) {
+            if (this.solutions.size === this.users.size) {
                 this.precalculateScores();
             }
         });
@@ -331,5 +338,20 @@ export class Game {
             }
             this.state = GameState.SCORES;
         });
+
+        for(const user of this.peer.users) {
+            this.users.set(user.id, user);
+        }
+        this.userId = this.peer.userId;
+
+        this.peer.on("userconnect", (user) => {
+            this.users.set(user.id, user);
+
+            if (this.peer?.isHost) {
+                this.messageWelcome?.send({ config: this.config });
+            }
+        });
+        this.peer.on("userdisconnect", (userId) => this.users.delete(userId));
+        this.peer.on("userupdate", (user) => this.users.set(user.id, user));
     }
 }
