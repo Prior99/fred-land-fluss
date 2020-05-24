@@ -1,6 +1,5 @@
 import { create as randomSeed, RandomSeed } from "random-seed";
 import { Peer, NetworkMode, MessageFactory, PeerOptions, createClient, createHost } from "p2p-networking";
-import { addSeconds, differenceInSeconds, isAfter } from "date-fns";
 import { computed, action, observable } from "mobx";
 import { component } from "tsdi";
 import {
@@ -52,7 +51,9 @@ export class Game {
     @observable public userId = "";
 
     @observable public state = GameState.LOBBY;
-    @observable public turn = 0;
+    @observable public deadline = Date.now();
+    @observable public now = Date.now();
+    @observable public round = 0;
     @observable public totalScores = new Map<string, number>();
     @observable public loading = new Set<LoadingFeatures>();
 
@@ -286,6 +287,18 @@ export class Game {
         }
     }
 
+    @computed public get inCountdown(): boolean {
+        return this.now < this.deadline;
+    }
+
+    @computed public get showTimer(): boolean {
+        return this.now < this.deadline - 2000;
+    }
+
+    @computed public get showLetter(): boolean {
+        return this.now > this.deadline - 2000 && this.now < this.deadline;
+    }
+
     @action.bound public async initialize(networkId?: string): Promise<void> {
         this.networkMode = NetworkMode.CONNECTING;
 
@@ -325,9 +338,20 @@ export class Game {
             this.config = config;
             this.rng = randomSeed(config.seed);
             this.startTurn();
+            this.deadline = Date.now() + 5000;
+            const interval = setInterval(() => {
+                this.now = Date.now()
+                if (!this.inCountdown) {
+                    clearInterval(interval);
+                }
+            }, 200);
+
+            for(const userId of this.users.keys()) {
+                this.totalScores.set(userId, 0);
+            }
         });
         this.messageNextRound.subscribe(() => {
-            this.turn++;
+            this.round++;
             this.startTurn();
         });
         this.messageEndRound.subscribe(() => {

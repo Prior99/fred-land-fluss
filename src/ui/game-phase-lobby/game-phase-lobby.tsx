@@ -3,19 +3,18 @@ import { external, inject } from "tsdi";
 import { Segment, Form, Input, Popup, Message, Grid, List, Button, TableHeader } from "semantic-ui-react";
 import { computed, action } from "mobx";
 import { observer } from "mobx-react";
-import { MenuContainer } from "../../ui";
+import { MenuContainer } from "..";
 import { Game } from "../../game";
-import "./lobby.scss";
+import "./game-phase-lobby.scss";
 import { NetworkMode } from "p2p-networking";
-import { AppUser } from "../../types";
 
-export interface LobbyProps {
+export interface GamePhaseLobbyProps {
     className?: string;
 }
 
 @external
 @observer
-export class Lobby extends React.Component<LobbyProps> {
+export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
     @inject private game!: Game;
 
     @action.bound private handleStartClick(): void {

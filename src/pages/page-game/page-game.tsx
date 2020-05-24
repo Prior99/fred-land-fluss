@@ -5,7 +5,10 @@ import { observer } from "mobx-react";
 import { LobbyMode, GameState } from "../../types";
 import "./page-game.scss";
 import { Game } from "../../game";
-import { Lobby, GameContainer } from "../../ui";
+import { computed } from "mobx";
+import { GamePhaseCountdown, GamePhaseGuess, GamePhaseLobby, GamePhaseScoring } from "../../ui";
+import { GamePhaseScores } from "../../ui/game-phase-scores/game-phase-scores";
+import { unreachable } from "../../utils";
 
 export interface PageGameProps {
     lobbyMode: LobbyMode;
@@ -25,15 +28,31 @@ export class PageGame extends React.Component<RouteProps<PageGameProps>> {
         }
     }
 
-    public render(): JSX.Element {
+    @computed public get component(): JSX.Element {
         switch (this.game.state) {
-            case GameState.LOBBY:
-                return <Lobby className="PageGame__lobby" />;
             case GameState.GUESS:
-                return <GameContainer className="PageGame__gameContainer" />;
+                if (this.game.inCountdown) {
+                    return <GamePhaseCountdown />;
+                } else {
+                    return <GamePhaseGuess />;
+                }
+            case GameState.LOBBY:
+                return <GamePhaseLobby />;
+            case GameState.SCORES:
+                return <GamePhaseScores />;
+            case GameState.SCORING:
+                return <GamePhaseScoring />;
             default:
-                return <div>Lol</div>
+                unreachable(this.game.state);
         }
+    }
+
+    public render(): JSX.Element {
+        return (
+            <div className="PageGame">
+                {this.component}
+            </div>
+        );
     }
 }
 
