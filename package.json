@@ -6,7 +6,8 @@
     "scripts": {
         "build": "webpack",
         "start": "webpack-dev-server",
-        "lint": "eslint --max-warnings 0 src/**/*.ts src/**/*.tsx"
+        "lint": "eslint --max-warnings 0 src/**/*.ts src/**/*.tsx",
+        "analyze": "yarn build && webpack -p --profile --json > dist/stats.json && webpack-bundle-analyzer dist/stats.json"
     },
     "author": "Frederick Gnodtke",
     "license": "MIT",
@@ -63,7 +64,6 @@
         "react-dom": "^16.13.1",
         "react-router": "^5.2.0",
         "react-router-dom": "^5.2.0",
-        "semantic-ui-css-offline": "^1.0.4-2.4.2",
         "semantic-ui-react": "^0.88.2",
         "tsdi": "^0.22.0"
     },
@@ -85,14 +85,15 @@
         "eslint-plugin-react": "^7.20.0",
         "file-loader": "^6.0.0",
         "git-revision-webpack-plugin": "^3.0.6",
+        "mini-css-extract-plugin": "^0.9.0",
         "node-sass": "^4.14.1",
         "prettier": "^2.0.5",
-        "resolve-url-loader": "^3.1.1",
         "sass-loader": "^8.0.2",
         "style-loader": "^1.2.1",
         "ts-loader": "^7.0.4",
         "typescript": "^3.9.3",
         "webpack": "^4.43.0",
+        "webpack-bundle-analyzer": "^3.8.0",
         "webpack-cli": "^3.3.11",
         "webpack-dev-server": "^3.11.0"
     }
