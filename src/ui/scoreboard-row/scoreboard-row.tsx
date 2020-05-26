@@ -20,7 +20,7 @@ export class ScoreboardRow extends React.Component<ScoreboardRowProps> {
     }
 
     @computed private get score(): string {
-        return (this.game.totalScores.get(this.props.userId) ?? 0).toLocaleString();
+        return (this.game.userStates.get(this.props.userId)?.totalScore ?? 0).toLocaleString();
     }
 
     @computed private get rank(): string {

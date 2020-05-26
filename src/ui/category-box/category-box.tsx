@@ -66,7 +66,7 @@ export class CategoryBox extends React.Component<CategoryBoxProps> {
             dots.push(<div className="CategoryBox__dot CategoryBox__dot--touched" key={i} />);
         }
         for (let i = 0; i < this.untouched; ++i) {
-            dots.push(<div className="CategoryBox__dot" key={i} />);
+            dots.push(<div className="CategoryBox__dot" key={i + this.game.userList.length} />);
         }
         return (
             <Card className={this.classNames}>

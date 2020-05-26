@@ -27,7 +27,4 @@ export const allLetters = new Set<Letter>([
     Letter.X,
     Letter.Y,
     Letter.Z,
-    Letter.AE,
-    Letter.OE,
-    Letter.UE,
 ]);

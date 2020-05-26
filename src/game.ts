@@ -1,5 +1,5 @@
 import { create as randomSeed, RandomSeed } from "random-seed";
-import { NetworkMode, MessageFactory, PeerOptions, createClient, createHost } from "p2p-networking";
+import { MessageFactory, PeerOptions } from "p2p-networking";
 import { ObservablePeer, createObservableClient, createObservableHost } from "p2p-networking-mobx";
 import { computed, action, observable } from "mobx";
 import { component } from "tsdi";
@@ -20,6 +20,7 @@ import {
     Validation,
     Letter,
     MessageTouchCategory,
+    MessageSkipTurn,
 } from "./types";
 import { v4 } from "uuid";
 import { generateUserName, allLetters } from "./utils";
@@ -37,6 +38,15 @@ export const enum LoadingFeatures {
     END_ROUND = "end round",
     ACCEPT_SOLUTIONS = "accept solutions",
     SCORE_WORD = "score word",
+    SKIP = "skip",
+}
+
+export interface UserState {
+    solutions: Map<string, string>;
+    currentScores: Map<string, ScoreType>;
+    touchedCategories: Set<string>;
+    totalScore: number;
+    skipped: boolean;
 }
 
 @component
@@ -52,12 +62,8 @@ export class Game {
     @observable public deadline = Date.now();
     @observable public now = Date.now();
     @observable public round = 0;
-    @observable public totalScores = new Map<string, number>();
     @observable public loading = new Set<LoadingFeatures>();
-
-    @observable public solutions = new Map<string, Map<string, string>>();
-    @observable public currentScores = new Map<string, Map<string, ScoreType>>();
-    @observable public touchedCategories = new Map<string, Set<string>>();
+    @observable public userStates = new Map<string, UserState>();
 
     @observable public currentLetter = Letter.A;
     @observable public usedLetters = new Set<Letter>();
@@ -73,13 +79,14 @@ export class Game {
     private messageScoreWord?: MessageFactory<MessageType, MessageScoreWord>;
     private messageAcceptSolutions?: MessageFactory<MessageType, MessageAcceptSolutions>;
     private messageTouchCategory?: MessageFactory<MessageType, MessageTouchCategory>;
+    private messageSkipTurn?: MessageFactory<MessageType, MessageSkipTurn>;
 
     @computed public get userName(): string {
         return this.user?.name ?? "";
     }
 
     @computed public get solution(): Map<string, string> | undefined {
-        return this.solutions.get(this.userId);
+        return this.userStates.get(this.userId)?.solutions;
     }
 
     @computed public get userId(): string {
@@ -87,10 +94,14 @@ export class Game {
     }
 
     @computed public get scoreList(): Score[] {
-        return Array.from(this.totalScores.entries())
-            .sort((a, b) => b[1] - a[1])
-            .map(([playerId, score]) => ({ playerId, playerName: this.getUser(playerId)?.name ?? "", score }))
-            .map(({ playerName, playerId, score }, index) => ({
+        return Array.from(this.userStates.entries())
+            .sort(([_idA, a], [_idB, b]) => b.totalScore - a.totalScore)
+            .map(([playerId, { totalScore }]) => ({
+                playerId,
+                playerName: this.getUser(playerId)?.name ?? "",
+                totalScore,
+            }))
+            .map(({ playerName, playerId, totalScore: score }, index) => ({
                 rank: index + 1,
                 score,
                 playerName,
@@ -143,6 +154,15 @@ export class Game {
         this.loading.delete(LoadingFeatures.NEXT_ROUND);
     }
 
+    public async sendSkip(): Promise<void> {
+        if (!this.messageSkipTurn) {
+            throw new Error("Network not initialized.");
+        }
+        this.loading.add(LoadingFeatures.SKIP);
+        await this.messageSkipTurn.send({ skipped: !this.userStates.get(this.userId)?.skipped ?? true }).waitForAll();
+        this.loading.delete(LoadingFeatures.SKIP);
+    }
+
     public async sendEndRound(): Promise<void> {
         if (!this.messageEndRound) {
             throw new Error("Network not initialized.");
@@ -185,7 +205,7 @@ export class Game {
     }
 
     public getScore(userId: string, category: string): ScoreType {
-        return this.currentScores.get(userId)?.get(category) ?? ScoreType.NONE;
+        return this.userStates.get(userId)?.currentScores.get(category) ?? ScoreType.NONE;
     }
 
     @action.bound public changeCategory(index: number, newName: string): void {
@@ -232,26 +252,40 @@ export class Game {
         return result;
     }
 
+    @computed public get allSkipped(): boolean {
+        return this.userList.every(({ id }) => this.userStates.get(id)?.skipped);
+    }
+
     @action.bound private startTurn(): void {
         if (!this.rng) {
             throw new Error("Game not started.");
         }
-        this.touchedCategories.clear();
-        this.currentScores.clear();
+        for (const { id } of this.userList) {
+            const state = this.userStates.get(id);
+            if (!state) {
+                this.userStates.set(id, {
+                    touchedCategories: new Set(),
+                    currentScores: new Map(),
+                    solutions: new Map(),
+                    skipped: false,
+                    totalScore: 0,
+                });
+            } else {
+                state.touchedCategories.clear();
+                state.currentScores.clear();
+                state.solutions.clear();
+                state.skipped = false;
+            }
+            for (const category of this.config.categories) {
+                this.userStates.get(id)!.solutions.set(category, "");
+            }
+        }
         this.currentLetter = Array.from(this.availableLetters.values())[
             this.rng.intBetween(0, this.availableLetters.size - 1)
         ];
         this.usedLetters.add(this.currentLetter);
-        this.solutions.clear();
         if (!this.peer) {
             throw new Error("Network not initialized.");
-        }
-        for (const { id } of this.peer.users) {
-            const map = new Map<string, string>();
-            for (const category of this.config.categories) {
-                map.set(category, "");
-            }
-            this.solutions.set(id, map);
         }
         this.state = GameState.GUESS;
         this.deadline = Date.now() + 8000;
@@ -264,13 +298,13 @@ export class Game {
     }
 
     public getWord(userId: string, category: string): string {
-        return this.solutions.get(userId)?.get(category)?.trim().toLowerCase() ?? "";
+        return this.userStates.get(userId)?.solutions.get(category)?.toLowerCase() ?? "";
     }
 
     public getAllWords(category: string): Map<string, number> {
         const result = new Map<string, number>();
-        for (const [_userId, solution] of this.solutions) {
-            const word = solution.get(category) ?? "";
+        for (const [_userId, state] of this.userStates) {
+            const word = state.solutions.get(category) ?? "";
             const trimmed = word.trim().toLowerCase();
             if (!trimmed || trimmed.length === 0) {
                 continue;
@@ -281,11 +315,7 @@ export class Game {
     }
 
     @action.bound private setScore(userId: string, category: string, score: ScoreType): void {
-        if (!this.currentScores.has(userId)) {
-            this.currentScores.set(userId, new Map());
-        }
-        const userScores = this.currentScores.get(userId)!;
-        userScores.set(category, score);
+        this.userStates.get(userId)?.currentScores?.set(category, score);
     }
 
     private precalculateScores(): void {
@@ -309,7 +339,7 @@ export class Game {
     }
 
     private hasTouchedCategory(userId: string, category: string): boolean {
-        return this.touchedCategories.get(userId)?.has(category) ?? false;
+        return this.userStates.get(userId)?.touchedCategories.has(category) ?? false;
     }
 
     public getUntouched(category: string): number {
@@ -323,10 +353,7 @@ export class Game {
     }
 
     @action.bound public setWord(userId: string, category: string, word: string): void {
-        if (!this.solutions.has(userId)) {
-            this.solutions.set(userId, new Map());
-        }
-        this.solutions.get(userId)!.set(category, word);
+        this.userStates.get(userId)?.solutions.set(category, word);
         if (!this.hasTouchedCategory(userId, category)) {
             this.sendTouchCategory(category);
         }
@@ -336,8 +363,17 @@ export class Game {
         return this.now < this.deadline;
     }
 
-    @action.bound public async initialize(networkId?: string): Promise<void> {
+    public isUserDone(userId: string): boolean {
+        const state = this.userStates.get(userId)!;
+        return state.skipped || this.config.categories.every((category) => Boolean(state.solutions.get(category)));
+    }
 
+    @action.bound private endRound(): void {
+        this.state = GameState.SCORING;
+        this.sendSolution();
+    }
+
+    @action.bound public async initialize(networkId?: string): Promise<void> {
         const options: PeerOptions<AppUser> = {
             applicationProtocolVersion: "0.0.0",
             peerJsOptions: {
@@ -361,23 +397,27 @@ export class Game {
         this.messageScoreWord = this.peer.message<MessageScoreWord>(MessageType.SCORE_WORD);
         this.messageAcceptSolutions = this.peer.message<MessageAcceptSolutions>(MessageType.ACCEPT_SOLUTIONS);
         this.messageTouchCategory = this.peer.message<MessageTouchCategory>(MessageType.TOUCH_CATEGORY);
+        this.messageSkipTurn = this.peer.message<MessageSkipTurn>(MessageType.SKIP);
+        this.messageSkipTurn.subscribe(({ skipped }, userId) => {
+            this.userStates.get(userId)!.skipped = skipped;
+            if (this.allSkipped) {
+                this.endRound();
+            }
+        });
 
         this.messageWelcome.subscribe(({ config }) => {
             this.config = config;
         });
         this.messageTouchCategory.subscribe(({ category }, userId) => {
-            if (!this.touchedCategories.has(userId)) {
-                this.touchedCategories.set(userId, new Set());
-            }
-            this.touchedCategories.get(userId)!.add(category);
+            this.userStates.get(userId)?.touchedCategories.add(category);
         });
         this.messageChangeConfig.subscribe(({ config }) => (this.config = config));
         this.messageStartGame.subscribe(({ config }) => {
             this.config = config;
             this.rng = randomSeed(config.seed);
             this.startTurn();
-            for (const user of this.userList) {
-                this.totalScores.set(user.id, 0);
+            for (const [_userId, state] of this.userStates) {
+                state.totalScore = 0;
             }
         });
         this.messageNextRound.subscribe(() => {
@@ -385,30 +425,22 @@ export class Game {
             this.startTurn();
         });
         this.messageEndRound.subscribe(() => {
-            this.state = GameState.SCORING;
-            this.sendSolution();
+            this.endRound();
         });
         this.messageSolution.subscribe(({ solution }, userId) => {
-            this.solutions.set(userId, new Map(solution));
+            this.userStates.get(userId)!.solutions = new Map(solution);
             if (!this.userList) {
                 throw new Error("Network not initialized.");
             }
-            if (this.solutions.size === this.userList.length) {
-                this.precalculateScores();
-            }
+            this.precalculateScores();
         });
         this.messageScoreWord.subscribe(({ userId, category, scoreType }) => {
-            const userScore = this.currentScores.get(userId);
-            if (!userScore) {
-                throw new Error("Score not present.");
-            }
-            userScore.set(category, scoreType);
+            this.userStates.get(userId)?.currentScores.set(category, scoreType);
         });
         this.messageAcceptSolutions.subscribe(() => {
-            for (const [userId, scores] of this.currentScores) {
-                const sum = Array.from(scores.values()).reduce((result, current) => result + current, 0);
-                const userTotalScore = this.totalScores.get(userId) ?? 0;
-                this.totalScores.set(userId, userTotalScore + sum);
+            for (const [_userId, state] of this.userStates) {
+                const sum = Array.from(state.currentScores.values()).reduce((result, current) => result + current, 0);
+                state.totalScore = (state.totalScore ?? 0) + sum;
             }
             this.state = GameState.SCORES;
         });

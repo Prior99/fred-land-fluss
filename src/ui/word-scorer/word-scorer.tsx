@@ -7,6 +7,7 @@ import { computed, action } from "mobx";
 import { Table, Dropdown } from "semantic-ui-react";
 import "./word-scorer.scss";
 import { ScoreType } from "../../types";
+import { NetworkMode } from "p2p-networking";
 
 export interface WordScorerProps {
     category: string;
@@ -49,14 +50,24 @@ export class WordScorer extends React.Component<WordScorerProps> {
                 <Table.Cell>{this.userName}</Table.Cell>
                 <Table.Cell className="WordScorer__word">{this.word}</Table.Cell>
                 <Table.Cell>
-                    <Dropdown text={`${this.score}`}>
-                        <Dropdown.Menu>
-                            <Dropdown.Item onClick={() => this.handleChangeScoring(ScoreType.NONE)} content="0" />
-                            <Dropdown.Item onClick={() => this.handleChangeScoring(ScoreType.DUPLICATE)} content="5" />
-                            <Dropdown.Item onClick={() => this.handleChangeScoring(ScoreType.UNIQUE)} content="10" />
-                            <Dropdown.Item onClick={() => this.handleChangeScoring(ScoreType.ONLY)} content="20" />
-                        </Dropdown.Menu>
-                    </Dropdown>
+                    {this.game.peer?.networkMode === NetworkMode.HOST ? (
+                        <Dropdown text={`${this.score}`}>
+                            <Dropdown.Menu>
+                                <Dropdown.Item onClick={() => this.handleChangeScoring(ScoreType.NONE)} content="0" />
+                                <Dropdown.Item
+                                    onClick={() => this.handleChangeScoring(ScoreType.DUPLICATE)}
+                                    content="5"
+                                />
+                                <Dropdown.Item
+                                    onClick={() => this.handleChangeScoring(ScoreType.UNIQUE)}
+                                    content="10"
+                                />
+                                <Dropdown.Item onClick={() => this.handleChangeScoring(ScoreType.ONLY)} content="20" />
+                            </Dropdown.Menu>
+                        </Dropdown>
+                    ) : (
+                        <p>{this.score}</p>
+                    )}
                 </Table.Cell>
             </Table.Row>
         );

@@ -12,13 +12,26 @@ import { action, computed } from "mobx";
 export class GamePhaseGuess extends React.Component {
     @inject private game!: Game;
 
+    @action.bound private handleSkip(evt: React.SyntheticEvent<HTMLButtonElement>): void {
+        evt.preventDefault();
+        this.game.sendSkip();
+    }
+
     @action.bound private handleSubmit(evt: React.SyntheticEvent<HTMLFormElement>): void {
         evt.preventDefault();
         this.game.sendEndRound();
     }
 
-    @computed private get loading(): boolean {
+    @computed private get gaveUp(): boolean {
+        return this.game.userStates.get(this.game.userId!)?.skipped ?? false;
+    }
+
+    @computed private get submitLoading(): boolean {
         return this.game.loading.has(LoadingFeatures.END_ROUND);
+    }
+
+    @computed private get skipLoading(): boolean {
+        return this.game.loading.has(LoadingFeatures.SKIP);
     }
 
     public render(): JSX.Element {
@@ -36,14 +49,28 @@ export class GamePhaseGuess extends React.Component {
                         ))}
                     </div>
                     <Card className="GamePhaseGuess__buttonCard">
-                        <Button
-                            className="GamePhaseGuess__button"
-                            primary
-                            disabled={this.loading || !this.game.canEndTurn}
-                            content="Submit"
-                            icon="check"
-                            loading={this.loading}
-                        />
+                        <Button.Group>
+                            <Button
+                                className="GamePhaseGuess__button"
+                                disabled={this.skipLoading}
+                                content={this.gaveUp ? "Gave up" : "Give up"}
+                                icon="pause"
+                                loading={this.skipLoading}
+                                onClick={this.handleSkip}
+                                toggle
+                                active={this.gaveUp}
+                                negative
+                            />
+                            <Button.Or />
+                            <Button
+                                className="GamePhaseGuess__button"
+                                disabled={this.submitLoading || !this.game.canEndTurn}
+                                content="Done"
+                                icon="check"
+                                loading={this.submitLoading}
+                                positive
+                            />
+                        </Button.Group>
                     </Card>
                 </Form>
             </div>

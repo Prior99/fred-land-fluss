@@ -17,6 +17,7 @@ export const enum MessageType {
     SCORE_WORD = "score word",
     ACCEPT_SOLUTIONS = "accept solutions",
     TOUCH_CATEGORY = "touch category",
+    SKIP = "skip",
 }
 
 export interface MessageWelcome {
@@ -49,4 +50,8 @@ export interface MessageAcceptSolutions {}
 
 export interface MessageTouchCategory {
     category: string;
+}
+
+export interface MessageSkipTurn {
+    skipped: boolean;
 }

@@ -30,19 +30,21 @@
     height: 100%;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 
     &__container {
         position: relative;
-        height: 30vh;
+        height: 50vh;
         width: 50vh;
     }
 
     &__character {
         position: absolute;
         width: 100%;
-        top: 50%;
         opacity: 0;
         text-align: center;
+        line-height: 50vh;
+        height: 50vh;
 
         &--letter {
             font-size: 50vh;
