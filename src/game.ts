@@ -14,13 +14,13 @@ import {
     MessageEndRound,
     MessageSolution,
     MessageScoreWord,
-    MessageAcceptSolutions,
     MessageWelcome,
     ScoreType,
     Validation,
     Letter,
     MessageTouchCategory,
     MessageSkipTurn,
+    MessageAcceptScoring,
 } from "./types";
 import { v4 } from "uuid";
 import { generateUserName, allLetters } from "./utils";
@@ -47,6 +47,7 @@ export interface UserState {
     touchedCategories: Set<string>;
     totalScore: number;
     skipped: boolean;
+    hasAcceptedScore: boolean;
 }
 
 @component
@@ -77,9 +78,9 @@ export class Game {
     private messageEndRound?: MessageFactory<MessageType, MessageEndRound>;
     private messageSolution?: MessageFactory<MessageType, MessageSolution>;
     private messageScoreWord?: MessageFactory<MessageType, MessageScoreWord>;
-    private messageAcceptSolutions?: MessageFactory<MessageType, MessageAcceptSolutions>;
     private messageTouchCategory?: MessageFactory<MessageType, MessageTouchCategory>;
     private messageSkipTurn?: MessageFactory<MessageType, MessageSkipTurn>;
+    private messageAcceptScoring?: MessageFactory<MessageType, MessageAcceptScoring>;
 
     @computed public get userName(): string {
         return this.user?.name ?? "";
@@ -195,12 +196,12 @@ export class Game {
         this.loading.delete(LoadingFeatures.SCORE_WORD);
     }
 
-    public async sendAcceptSolutions(): Promise<void> {
-        if (!this.messageAcceptSolutions) {
+    public async sendAcceptScoring(): Promise<void> {
+        if (!this.messageAcceptScoring) {
             throw new Error("Network not initialized.");
         }
         this.loading.add(LoadingFeatures.ACCEPT_SOLUTIONS);
-        await this.messageAcceptSolutions.send({}).waitForAll();
+        await this.messageAcceptScoring.send({}).waitForAll();
         this.loading.delete(LoadingFeatures.ACCEPT_SOLUTIONS);
     }
 
@@ -269,8 +270,10 @@ export class Game {
                     solutions: new Map(),
                     skipped: false,
                     totalScore: 0,
+                    hasAcceptedScore: false,
                 });
             } else {
+                state.hasAcceptedScore = true;
                 state.touchedCategories.clear();
                 state.currentScores.clear();
                 state.solutions.clear();
@@ -359,6 +362,10 @@ export class Game {
         }
     }
 
+    @computed public get notAcceptedScoringCount(): number {
+        return this.userList.reduce((result, current) => !this.userStates.get(current.id)!.hasAcceptedScore ? result + 1 : result,  0);
+    }
+
     @computed public get inCountdown(): boolean {
         return this.now < this.deadline;
     }
@@ -395,9 +402,10 @@ export class Game {
         this.messageEndRound = this.peer.message<MessageEndRound>(MessageType.END_ROUND);
         this.messageSolution = this.peer.message<MessageSolution>(MessageType.SOLUTION);
         this.messageScoreWord = this.peer.message<MessageScoreWord>(MessageType.SCORE_WORD);
-        this.messageAcceptSolutions = this.peer.message<MessageAcceptSolutions>(MessageType.ACCEPT_SOLUTIONS);
         this.messageTouchCategory = this.peer.message<MessageTouchCategory>(MessageType.TOUCH_CATEGORY);
         this.messageSkipTurn = this.peer.message<MessageSkipTurn>(MessageType.SKIP);
+        this.messageAcceptScoring = this.peer.message<MessageAcceptScoring>(MessageType.ACCEPT_SCORING);
+
         this.messageSkipTurn.subscribe(({ skipped }, userId) => {
             this.userStates.get(userId)!.skipped = skipped;
             if (this.allSkipped) {
@@ -437,7 +445,11 @@ export class Game {
         this.messageScoreWord.subscribe(({ userId, category, scoreType }) => {
             this.userStates.get(userId)?.currentScores.set(category, scoreType);
         });
-        this.messageAcceptSolutions.subscribe(() => {
+        this.messageAcceptScoring.subscribe((_, userId) => {
+            this.userStates.get(userId)!.hasAcceptedScore = true;
+            if (!this.userList.every(({ id }) => this.userStates.get(id)?.hasAcceptedScore)) {
+                return;
+            }
             for (const [_userId, state] of this.userStates) {
                 const sum = Array.from(state.currentScores.values()).reduce((result, current) => result + current, 0);
                 state.totalScore = (state.totalScore ?? 0) + sum;

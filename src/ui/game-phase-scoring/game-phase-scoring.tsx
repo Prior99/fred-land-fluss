@@ -4,8 +4,7 @@ import { external, inject } from "tsdi";
 import { Game, LoadingFeatures } from "../../game";
 import "./game-phase-scoring.scss";
 import { CategoryBox } from "../category-box";
-import { Card, Form, Button } from "semantic-ui-react";
-import { NetworkMode } from "p2p-networking";
+import { Card, Form, Button, Label } from "semantic-ui-react";
 import { computed, action } from "mobx";
 
 @external
@@ -18,7 +17,7 @@ export class GamePhaseScoring extends React.Component {
     }
 
     @action.bound private handleSubmit(_evt: React.SyntheticEvent<HTMLFormElement>): void {
-        this.game.sendAcceptSolutions();
+        this.game.sendAcceptScoring();
     }
 
     public render(): JSX.Element {
@@ -35,18 +34,20 @@ export class GamePhaseScoring extends React.Component {
                             />
                         ))}
                     </div>
-                    {this.game.peer?.networkMode === NetworkMode.HOST && (
-                        <Card className="GamePhaseScoring__buttonCard">
+                    <Card className="GamePhaseScoring__buttonCard">
+                        <Button as="div" labelPosition="right">
                             <Button
                                 className="GamePhaseScoring__button"
                                 primary
+                                fluid
                                 disabled={this.loading}
-                                content="Submit"
+                                content="Accept Scoring"
                                 icon="check"
                                 loading={this.loading}
                             />
-                        </Card>
-                    )}
+                            <Label basic pointing="left">{this.game.notAcceptedScoringCount} missing</Label>
+                        </Button>
+                    </Card>
                 </Form>
             </div>
         );
