@@ -273,7 +273,7 @@ export class Game {
                     hasAcceptedScore: false,
                 });
             } else {
-                state.hasAcceptedScore = true;
+                state.hasAcceptedScore = false;
                 state.touchedCategories.clear();
                 state.currentScores.clear();
                 state.solutions.clear();
