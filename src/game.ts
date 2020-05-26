@@ -390,11 +390,12 @@ export class Game {
             user: {
                 name: generateUserName(),
             },
+            timeout: 120,
         };
         this.peer =
             typeof networkId === "string"
                 ? await createObservableClient(options, networkId)
-                : await createObservableHost({ ...options, pingInterval: 10 });
+                : await createObservableHost({ ...options, pingInterval: 30 });
         this.messageWelcome = this.peer.message<MessageWelcome>(MessageType.WELCOME);
         this.messageChangeConfig = this.peer.message<MessageChangeConfig>(MessageType.CHANGE_CONFIG);
         this.messageStartGame = this.peer.message<MessageStartGame>(MessageType.START_GAME);
