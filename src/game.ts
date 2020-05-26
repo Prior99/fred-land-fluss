@@ -1,5 +1,6 @@
 import { create as randomSeed, RandomSeed } from "random-seed";
-import { Peer, NetworkMode, MessageFactory, PeerOptions, createClient, createHost } from "p2p-networking";
+import { NetworkMode, MessageFactory, PeerOptions, createClient, createHost } from "p2p-networking";
+import { ObservablePeer, createObservableClient, createObservableHost } from "p2p-networking-mobx";
 import { computed, action, observable } from "mobx";
 import { component } from "tsdi";
 import {
@@ -40,15 +41,12 @@ export const enum LoadingFeatures {
 
 @component
 export class Game {
-    public peer: Peer<AppUser, MessageType> | undefined;
+    @observable.shallow public peer: ObservablePeer<AppUser, MessageType> | undefined;
 
     @observable public config: GameConfig = {
         seed: v4(),
         categories: ["Stadt", "Land", "Fluss"],
     };
-
-    @observable public networkMode = NetworkMode.DISCONNECTED;
-    @observable public userId = "";
 
     @observable public state = GameState.LOBBY;
     @observable public deadline = Date.now();
@@ -56,8 +54,6 @@ export class Game {
     @observable public round = 0;
     @observable public totalScores = new Map<string, number>();
     @observable public loading = new Set<LoadingFeatures>();
-
-    @observable public users: Map<string, AppUser> = new Map();
 
     @observable public solutions = new Map<string, Map<string, string>>();
     @observable public currentScores = new Map<string, Map<string, ScoreType>>();
@@ -86,6 +82,10 @@ export class Game {
         return this.solutions.get(this.userId);
     }
 
+    @computed public get userId(): string {
+        return this.peer?.userId ?? "";
+    }
+
     @computed public get scoreList(): Score[] {
         return Array.from(this.totalScores.entries())
             .sort((a, b) => b[1] - a[1])
@@ -99,7 +99,7 @@ export class Game {
     }
 
     @computed public get userList(): AppUser[] {
-        return Array.from(this.users.values());
+        return this.peer?.users ?? [];
     }
 
     @computed public get user(): AppUser | undefined {
@@ -107,14 +107,14 @@ export class Game {
     }
 
     public getUser(userId: string): AppUser | undefined {
-        return this.users.get(userId);
+        return this.peer?.getUser(userId);
     }
 
     public getRank(playerId: string): number {
         return this.scoreList.find((entry) => entry.playerId === playerId)?.rank ?? 0;
     }
 
-    public changeName(newName: string) {
+    public changeName(newName: string): void {
         this.peer?.updateUser({ name: newName });
     }
 
@@ -269,7 +269,7 @@ export class Game {
 
     public getAllWords(category: string): Map<string, number> {
         const result = new Map<string, number>();
-        for (const [userId, solution] of this.solutions) {
+        for (const [_userId, solution] of this.solutions) {
             const word = solution.get(category) ?? "";
             const trimmed = word.trim().toLowerCase();
             if (!trimmed || trimmed.length === 0) {
@@ -291,7 +291,7 @@ export class Game {
     private precalculateScores(): void {
         for (const category of this.config.categories) {
             const allWords = this.getAllWords(category);
-            for (const { id: userId } of this.users.values()) {
+            for (const { id: userId } of this.userList) {
                 const word = this.getWord(userId, category);
                 if (!word) {
                     this.setScore(userId, category, ScoreType.NONE);
@@ -314,8 +314,8 @@ export class Game {
 
     public getUntouched(category: string): number {
         let result = 0;
-        for (const userId of this.users.keys()) {
-            if (!this.hasTouchedCategory(userId, category)) {
+        for (const user of this.userList) {
+            if (!this.hasTouchedCategory(user.id, category)) {
                 result++;
             }
         }
@@ -337,7 +337,6 @@ export class Game {
     }
 
     @action.bound public async initialize(networkId?: string): Promise<void> {
-        this.networkMode = NetworkMode.CONNECTING;
 
         const options: PeerOptions<AppUser> = {
             applicationProtocolVersion: "0.0.0",
@@ -351,9 +350,8 @@ export class Game {
         };
         this.peer =
             typeof networkId === "string"
-                ? await createClient(options, networkId)
-                : await createHost({ ...options, pingInterval: 10 });
-        this.networkMode = this.peer.networkMode;
+                ? await createObservableClient(options, networkId)
+                : await createObservableHost({ ...options, pingInterval: 10 });
         this.messageWelcome = this.peer.message<MessageWelcome>(MessageType.WELCOME);
         this.messageChangeConfig = this.peer.message<MessageChangeConfig>(MessageType.CHANGE_CONFIG);
         this.messageStartGame = this.peer.message<MessageStartGame>(MessageType.START_GAME);
@@ -366,10 +364,6 @@ export class Game {
 
         this.messageWelcome.subscribe(({ config }) => {
             this.config = config;
-
-            for (const user of this.peer?.users ?? []) {
-                this.users.set(user.id, user);
-            }
         });
         this.messageTouchCategory.subscribe(({ category }, userId) => {
             if (!this.touchedCategories.has(userId)) {
@@ -382,8 +376,8 @@ export class Game {
             this.config = config;
             this.rng = randomSeed(config.seed);
             this.startTurn();
-            for (const userId of this.users.keys()) {
-                this.totalScores.set(userId, 0);
+            for (const user of this.userList) {
+                this.totalScores.set(user.id, 0);
             }
         });
         this.messageNextRound.subscribe(() => {
@@ -396,10 +390,10 @@ export class Game {
         });
         this.messageSolution.subscribe(({ solution }, userId) => {
             this.solutions.set(userId, new Map(solution));
-            if (!this.users) {
+            if (!this.userList) {
                 throw new Error("Network not initialized.");
             }
-            if (this.solutions.size === this.users.size) {
+            if (this.solutions.size === this.userList.length) {
                 this.precalculateScores();
             }
         });
@@ -410,7 +404,7 @@ export class Game {
             }
             userScore.set(category, scoreType);
         });
-        this.messageAcceptSolutions.subscribe(({}) => {
+        this.messageAcceptSolutions.subscribe(() => {
             for (const [userId, scores] of this.currentScores) {
                 const sum = Array.from(scores.values()).reduce((result, current) => result + current, 0);
                 const userTotalScore = this.totalScores.get(userId) ?? 0;
@@ -418,20 +412,5 @@ export class Game {
             }
             this.state = GameState.SCORES;
         });
-
-        for (const user of this.peer.users) {
-            this.users.set(user.id, user);
-        }
-        this.userId = this.peer.userId;
-
-        this.peer.on("userconnect", (user) => {
-            this.users.set(user.id, user);
-
-            if (this.peer?.isHost) {
-                this.messageWelcome?.send({ config: this.config });
-            }
-        });
-        this.peer.on("userdisconnect", (userId) => this.users.delete(userId));
-        this.peer.on("userupdate", (user) => this.users.set(user.id, user));
     }
 }

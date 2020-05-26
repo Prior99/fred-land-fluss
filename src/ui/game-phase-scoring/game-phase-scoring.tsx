@@ -35,7 +35,7 @@ export class GamePhaseScoring extends React.Component {
                             />
                         ))}
                     </div>
-                    {this.game.networkMode === NetworkMode.HOST && (
+                    {this.game.peer?.networkMode === NetworkMode.HOST && (
                         <Card className="GamePhaseScoring__buttonCard">
                             <Button
                                 className="GamePhaseScoring__button"

@@ -1,12 +1,13 @@
 import * as React from "react";
 import { external, inject } from "tsdi";
-import { Segment, Form, Input, Popup, Message, Grid, List, Button } from "semantic-ui-react";
+import { Segment, Form, Input, Grid, Button } from "semantic-ui-react";
 import { computed, action, observable } from "mobx";
 import { observer } from "mobx-react";
 import { MenuContainer } from "..";
 import { Game, LoadingFeatures } from "../../game";
 import "./game-phase-lobby.scss";
 import { NetworkMode } from "p2p-networking";
+import { IdMessage, UserTable } from "p2p-networking-semantic-ui-react";
 
 export interface GamePhaseLobbyProps {
     className?: string;
@@ -18,34 +19,18 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
     @inject private game!: Game;
 
     @observable private focus = false;
+    @observable private inputName: string | undefined;
 
     @action.bound private handleStartClick(): void {
         this.game.sendStartGame();
     }
 
+    @computed private get name(): string {
+        return this.inputName ?? this.game.user?.name ?? "";
+    }
+
     @computed private get isHost(): boolean {
-        return this.game.networkMode === NetworkMode.HOST;
-    }
-
-    @action.bound private async handleIdClick(): Promise<void> {
-        if (this.hasClipboardApi) {
-            await navigator.clipboard.writeText(this.connectUrl);
-        }
-    }
-
-    @computed private get hasClipboardApi(): boolean {
-        return Boolean(navigator.clipboard);
-    }
-
-    @computed private get connectUrl(): string {
-        return location.href.replace(location.hash, `#/game/client/${this.game.peer?.hostConnectionId}`);
-    }
-
-    @computed private get popupText(): string {
-        if (this.hasClipboardApi) {
-            return "Copied to clipboard.";
-        }
-        return `Can't copy to clipboard: "${this.connectUrl}".`;
+        return this.game.peer?.networkMode === NetworkMode.HOST;
     }
 
     @computed private get nameValid(): boolean {
@@ -53,8 +38,8 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
     }
 
     @action.bound private handleNameChange(evt: React.SyntheticEvent<HTMLInputElement>): void {
-        const name = evt.currentTarget.value;
-        this.game.changeName(name);
+        this.inputName = evt.currentTarget.value;
+        this.game.changeName(this.inputName);
     }
 
     @action.bound private handleCategoryChange(value: string, index: number): void {
@@ -86,13 +71,14 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
                     <Grid.Row>
                         <Grid.Column>
                             <Segment>
-                                <h2>Players</h2>
-                                <List as="ul">
-                                    {this.game.userList.map(({ id, name }) => (
-                                        <List.Item as="li" key={id} content={name} />
-                                    ))}
-                                </List>
-                                <h2>Options</h2>
+                                {this.game.peer && (
+                                    <UserTable
+                                        nameFactory={(user) => user.name}
+                                        basic="very"
+                                        unstackable
+                                        peer={this.game.peer}
+                                    />
+                                )}
                                 <Form>
                                     <Grid>
                                         <Grid.Row>
@@ -100,7 +86,7 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
                                                 <Form.Field error={!this.nameValid}>
                                                     <label>Change name</label>
                                                     <Input
-                                                        value={this.game.userName}
+                                                        value={this.name}
                                                         onChange={this.handleNameChange}
                                                     />
                                                 </Form.Field>
@@ -207,18 +193,9 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
                     </Grid.Row>
                     <Grid.Row>
                         <Grid.Column>
-                            <Popup
-                                on="click"
-                                inverted
-                                trigger={
-                                    <Message
-                                        icon="globe"
-                                        onClick={this.handleIdClick}
-                                        content={this.game.peer?.hostConnectionId}
-                                        className="Lobby__idMessage"
-                                    />
-                                }
-                                content={this.popupText}
+                            <IdMessage
+                                peer={this.game.peer}
+                                urlFactory={(id) => location.href.replace(location.hash, `#/game/client/${id}`)}
                             />
                         </Grid.Column>
                     </Grid.Row>

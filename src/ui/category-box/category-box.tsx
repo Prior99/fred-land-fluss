@@ -62,7 +62,7 @@ export class CategoryBox extends React.Component<CategoryBoxProps> {
 
     public render(): JSX.Element {
         const dots: JSX.Element[] = [];
-        for (let i = 0; i < this.game.users.size - this.untouched; ++i) {
+        for (let i = 0; i < this.game.userList.length - this.untouched; ++i) {
             dots.push(<div className="CategoryBox__dot CategoryBox__dot--touched" key={i} />);
         }
         for (let i = 0; i < this.untouched; ++i) {

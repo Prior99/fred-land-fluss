@@ -23,7 +23,7 @@ export class GamePhaseScores extends React.Component {
                 <Segment className="GamePhaseScores__content">
                     <h1>Scores</h1>
                     <Scoreboard />
-                    {this.game.networkMode === NetworkMode.HOST && (
+                    {this.game.peer?.networkMode === NetworkMode.HOST && (
                         <Button onClick={this.handleClick} icon="check" content="Next round" fluid primary />
                     )}
                 </Segment>

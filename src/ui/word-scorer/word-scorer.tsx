@@ -40,7 +40,7 @@ export class WordScorer extends React.Component<WordScorerProps> {
     }
 
     @computed private get userName(): string {
-        return this.game.users.get(this.props.userId)?.name ?? "";
+        return this.game.getUser(this.props.userId)?.name ?? "";
     }
 
     public render(): JSX.Element {
