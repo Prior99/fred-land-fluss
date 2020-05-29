@@ -480,6 +480,9 @@ export class Game {
         });
         this.messageScoreWord.subscribe(({ userId, category, scoreType }) => {
             this.userStates.get(userId)?.currentScores.set(category, scoreType);
+            for (const state of this.userStates.values()) {
+                state.hasAcceptedScore = false;
+            }
         });
         this.messageAcceptScoring.subscribe((_, userId) => {
             this.userStates.get(userId)!.hasAcceptedScore = true;

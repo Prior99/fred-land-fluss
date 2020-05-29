@@ -40,6 +40,10 @@ export class CategoryBox extends React.Component<CategoryBoxProps> {
         return this.game.getUntouched(this.props.category);
     }
 
+    @computed private get disabled(): boolean {
+        return this.game.userStates.get(this.game.userId)?.skipped ?? false;
+    }
+
     @computed private get content(): JSX.Element {
         switch (this.game.state) {
             case GameState.GUESS:
@@ -51,6 +55,7 @@ export class CategoryBox extends React.Component<CategoryBoxProps> {
                         value={this.word}
                         onChange={this.handleChangeWord}
                         fluid
+                        disabled={this.disabled}
                     />
                 );
             case GameState.SCORING:

@@ -2,7 +2,7 @@ import * as React from "react";
 import { addRoute, RouteProps } from "../../routing";
 import { external, inject } from "tsdi";
 import { observer } from "mobx-react";
-import { LobbyMode, GameState, AppUser } from "../../types";
+import { LobbyMode, GameState } from "../../types";
 import "./page-game.scss";
 import { Game } from "../../game";
 import { computed } from "mobx";

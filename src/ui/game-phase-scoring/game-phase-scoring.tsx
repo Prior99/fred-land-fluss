@@ -20,6 +20,10 @@ export class GamePhaseScoring extends React.Component {
         this.game.sendAcceptScoring();
     }
 
+    @computed private get accepted(): boolean {
+        return this.game.userStates.get(this.game.userId)?.hasAcceptedScore ?? false;
+    }
+
     public render(): JSX.Element {
         return (
             <div className="GamePhaseScoring">
@@ -40,8 +44,8 @@ export class GamePhaseScoring extends React.Component {
                                 className="GamePhaseScoring__button"
                                 primary
                                 fluid
-                                disabled={this.loading}
-                                content="Accept Scoring"
+                                disabled={this.loading || this.accepted}
+                                content={this.accepted ? "Accepted" : "Accept Scoring"}
                                 icon="check"
                                 loading={this.loading}
                             />

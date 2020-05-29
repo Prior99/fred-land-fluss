@@ -53,13 +53,12 @@ export class GamePhaseGuess extends React.Component {
                             <Button
                                 className="GamePhaseGuess__button"
                                 disabled={this.skipLoading}
-                                content={this.gaveUp ? "Gave up" : "Give up"}
-                                icon="pause"
+                                content={this.gaveUp ? "Undo" : "Give up"}
+                                icon={this.gaveUp ? "redo" : "pause"}
                                 loading={this.skipLoading}
                                 onClick={this.handleSkip}
-                                toggle
-                                active={this.gaveUp}
-                                negative
+                                type="button"
+                                primary={this.gaveUp}
                             />
                             <Button.Or />
                             <Button
@@ -67,8 +66,9 @@ export class GamePhaseGuess extends React.Component {
                                 disabled={this.submitLoading || !this.game.canEndTurn}
                                 content="Done"
                                 icon="check"
+                                type="submit"
                                 loading={this.submitLoading}
-                                positive
+                                primary={this.game.canEndTurn}
                             />
                         </Button.Group>
                     </Card>

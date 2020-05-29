@@ -6,7 +6,7 @@ import { Table, Icon } from "semantic-ui-react";
 import classNames from "classnames";
 import { computed } from "mobx";
 import "./scoreboard.scss";
-import { ScoreboardRow } from "../scoreboard-row";
+import { UserTable } from "p2p-networking-semantic-ui-react";
 
 export interface ScoreboardProps {
     className?: string;
@@ -23,24 +23,30 @@ export class Scoreboard extends React.Component<ScoreboardProps> {
 
     public render(): JSX.Element {
         return (
-            <Table unstackable className={this.classNames}>
-                <Table.Header>
-                    <Table.Row>
+            <UserTable
+                headerCells={() => (
+                    <>
                         <Table.HeaderCell className="Scoreboard__rankHeader">
                             <Icon name="trophy" />
                         </Table.HeaderCell>
-                        <Table.HeaderCell>Player</Table.HeaderCell>
                         <Table.HeaderCell textAlign="right" className="Scoreboard__scoreHeader">
                             Score
                         </Table.HeaderCell>
-                    </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                    {this.game.scoreList.map(({ playerId }) => (
-                        <ScoreboardRow key={playerId} userId={playerId} />
-                    ))}
-                </Table.Body>
-            </Table>
+                    </>
+                )}
+                customCells={(user) => (
+                    <>
+                        <Table.Cell className="ScoreboardRow__rank">{this.game.getRank(user.id)}</Table.Cell>
+                        <Table.Cell textAlign="right" className="ScoreboardRow__score">
+                            {(this.game.userStates.get(user.id)?.totalScore ?? 0).toLocaleString()}
+                        </Table.Cell>
+                    </>
+                )}
+                peer={this.game.peer!}
+                nameFactory={(user) => user.name}
+                unstackable
+                className={this.classNames}
+            />
         );
     }
 }

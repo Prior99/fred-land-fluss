@@ -27,6 +27,7 @@ body {
     &__main {
         z-index: 1;
         height: 100%;
+        overflow-y: auto;
 
         @media (orientation: landscape) {
             overflow: hidden;
