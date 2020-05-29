@@ -7,6 +7,8 @@ import { getRoutes } from "./routing";
 import { routeMainMenu } from "./pages";
 import "./app.scss";
 import { Background } from "./ui/background/background";
+import { ReconnectModal } from "p2p-networking-semantic-ui-react";
+import { Game } from "./game";
 
 // Start dependency injection.
 const tsdi = new TSDI();

@@ -1,4 +1,5 @@
 import { create as randomSeed, RandomSeed } from "random-seed";
+import NomineLipsum from "nomine-lipsum";
 import { MessageFactory, PeerOptions } from "p2p-networking";
 import { ObservablePeer, createObservableClient, createObservableHost } from "p2p-networking-mobx";
 import { computed, action, observable } from "mobx";
@@ -21,9 +22,10 @@ import {
     MessageTouchCategory,
     MessageSkipTurn,
     MessageAcceptScoring,
+    MessageGameState,
 } from "./types";
 import { v4 } from "uuid";
-import { generateUserName, allLetters } from "./utils";
+import { allLetters, deserializeUserState, serializeUserState } from "./utils";
 
 export interface Score {
     rank: number;
@@ -52,8 +54,7 @@ export interface UserState {
 
 @component
 export class Game {
-    @observable.shallow public peer: ObservablePeer<AppUser, MessageType> | undefined;
-
+    @observable.ref public peer: ObservablePeer<AppUser, MessageType> | undefined = undefined;
     @observable public config: GameConfig = {
         seed: v4(),
         categories: ["Stadt", "Land", "Fluss"],
@@ -72,6 +73,7 @@ export class Game {
     private rng?: RandomSeed;
 
     private messageWelcome?: MessageFactory<MessageType, MessageWelcome>;
+    private messageGameState?: MessageFactory<MessageType, MessageGameState>;
     private messageChangeConfig?: MessageFactory<MessageType, MessageChangeConfig>;
     private messageStartGame?: MessageFactory<MessageType, MessageStartGame>;
     private messageNextRound?: MessageFactory<MessageType, MessageNextRound>;
@@ -83,6 +85,7 @@ export class Game {
     private messageAcceptScoring?: MessageFactory<MessageType, MessageAcceptScoring>;
 
     @computed public get userName(): string {
+        console.log(this.peer?.disconnectedUsers);
         return this.user?.name ?? "";
     }
 
@@ -135,8 +138,11 @@ export class Game {
             throw new Error("Network not initialized.");
         }
         this.loading.add(LoadingFeatures.START_GAME);
-        await this.messageStartGame.send({ config: this.config }).waitForAll();
-        this.loading.delete(LoadingFeatures.START_GAME);
+        try {
+            await this.messageStartGame.send({ config: this.config }).waitForAll();
+        } finally {
+            this.loading.delete(LoadingFeatures.START_GAME);
+        }
     }
 
     public sendChangeConfig(): void {
@@ -151,8 +157,11 @@ export class Game {
             throw new Error("Network not initialized.");
         }
         this.loading.add(LoadingFeatures.NEXT_ROUND);
-        await this.messageNextRound.send({ config: this.config }).waitForAll();
-        this.loading.delete(LoadingFeatures.NEXT_ROUND);
+        try {
+            await this.messageNextRound.send({ config: this.config }).waitForAll();
+        } finally {
+            this.loading.delete(LoadingFeatures.NEXT_ROUND);
+        }
     }
 
     public async sendSkip(): Promise<void> {
@@ -160,8 +169,13 @@ export class Game {
             throw new Error("Network not initialized.");
         }
         this.loading.add(LoadingFeatures.SKIP);
-        await this.messageSkipTurn.send({ skipped: !this.userStates.get(this.userId)?.skipped ?? true }).waitForAll();
-        this.loading.delete(LoadingFeatures.SKIP);
+        try {
+            await this.messageSkipTurn
+                .send({ skipped: !this.userStates.get(this.userId)?.skipped ?? true })
+                .waitForAll();
+        } finally {
+            this.loading.delete(LoadingFeatures.SKIP);
+        }
     }
 
     public async sendEndRound(): Promise<void> {
@@ -169,8 +183,11 @@ export class Game {
             throw new Error("Network not initialized.");
         }
         this.loading.add(LoadingFeatures.END_ROUND);
-        await this.messageEndRound.send({ config: this.config }).waitForAll();
-        this.loading.delete(LoadingFeatures.END_ROUND);
+        try {
+            await this.messageEndRound.send({ config: this.config }).waitForAll();
+        } finally {
+            this.loading.delete(LoadingFeatures.END_ROUND);
+        }
     }
 
     public sendSolution(): void {
@@ -192,8 +209,11 @@ export class Game {
             throw new Error("Network not initialized.");
         }
         this.loading.add(LoadingFeatures.SCORE_WORD);
-        await this.messageScoreWord.send({ userId, category, scoreType }).waitForAll();
-        this.loading.delete(LoadingFeatures.SCORE_WORD);
+        try {
+            await this.messageScoreWord.send({ userId, category, scoreType }).waitForAll();
+        } finally {
+            this.loading.delete(LoadingFeatures.SCORE_WORD);
+        }
     }
 
     public async sendAcceptScoring(): Promise<void> {
@@ -201,8 +221,11 @@ export class Game {
             throw new Error("Network not initialized.");
         }
         this.loading.add(LoadingFeatures.ACCEPT_SOLUTIONS);
-        await this.messageAcceptScoring.send({}).waitForAll();
-        this.loading.delete(LoadingFeatures.ACCEPT_SOLUTIONS);
+        try {
+            await this.messageAcceptScoring.send({}).waitForAll();
+        } finally {
+            this.loading.delete(LoadingFeatures.ACCEPT_SOLUTIONS);
+        }
     }
 
     public getScore(userId: string, category: string): ScoreType {
@@ -257,6 +280,16 @@ export class Game {
         return this.userList.every(({ id }) => this.userStates.get(id)?.skipped);
     }
 
+    @action.bound private generateLetter(): void {
+        if (!this.rng) {
+            return;
+        }
+        this.currentLetter = Array.from(this.availableLetters.values())[
+            this.rng.intBetween(0, this.availableLetters.size - 1)
+        ];
+        this.usedLetters.add(this.currentLetter);
+    }
+
     @action.bound private startTurn(): void {
         if (!this.rng) {
             throw new Error("Game not started.");
@@ -283,10 +316,7 @@ export class Game {
                 this.userStates.get(id)!.solutions.set(category, "");
             }
         }
-        this.currentLetter = Array.from(this.availableLetters.values())[
-            this.rng.intBetween(0, this.availableLetters.size - 1)
-        ];
-        this.usedLetters.add(this.currentLetter);
+        this.generateLetter();
         if (!this.peer) {
             throw new Error("Network not initialized.");
         }
@@ -363,7 +393,10 @@ export class Game {
     }
 
     @computed public get notAcceptedScoringCount(): number {
-        return this.userList.reduce((result, current) => !this.userStates.get(current.id)!.hasAcceptedScore ? result + 1 : result,  0);
+        return this.userList.reduce(
+            (result, current) => (!this.userStates.get(current.id)!.hasAcceptedScore ? result + 1 : result),
+            0,
+        );
     }
 
     @computed public get inCountdown(): boolean {
@@ -380,22 +413,23 @@ export class Game {
         this.sendSolution();
     }
 
-    @action.bound public async initialize(networkId?: string): Promise<void> {
+    @action.bound public async initialize(networkId?: string, userId?: string): Promise<void> {
         const options: PeerOptions<AppUser> = {
             applicationProtocolVersion: "0.0.0",
             peerJsOptions: {
                 host: "peerjs.92k.de",
                 secure: true,
             },
-            user: {
-                name: generateUserName(),
-            },
-            timeout: 120,
+            pingInterval: 4,
+            timeout: 10,
+        };
+        const user = {
+            name: NomineLipsum.full(),
         };
         this.peer =
             typeof networkId === "string"
-                ? await createObservableClient(options, networkId)
-                : await createObservableHost({ ...options, pingInterval: 30 });
+                ? await createObservableClient(options, networkId, userId ? userId : user)
+                : await createObservableHost(options, user);
         this.messageWelcome = this.peer.message<MessageWelcome>(MessageType.WELCOME);
         this.messageChangeConfig = this.peer.message<MessageChangeConfig>(MessageType.CHANGE_CONFIG);
         this.messageStartGame = this.peer.message<MessageStartGame>(MessageType.START_GAME);
@@ -406,6 +440,7 @@ export class Game {
         this.messageTouchCategory = this.peer.message<MessageTouchCategory>(MessageType.TOUCH_CATEGORY);
         this.messageSkipTurn = this.peer.message<MessageSkipTurn>(MessageType.SKIP);
         this.messageAcceptScoring = this.peer.message<MessageAcceptScoring>(MessageType.ACCEPT_SCORING);
+        this.messageGameState = this.peer.message<MessageGameState>(MessageType.GAME_STATE);
 
         this.messageSkipTurn.subscribe(({ skipped }, userId) => {
             this.userStates.get(userId)!.skipped = skipped;
@@ -456,6 +491,45 @@ export class Game {
                 state.totalScore = (state.totalScore ?? 0) + sum;
             }
             this.state = GameState.SCORES;
+        });
+        this.messageGameState?.subscribe(
+            action(({ config, state, deadline, round, userStates, currentLetter, usedLetters }) => {
+                this.config = config;
+                this.deadline = deadline;
+                this.round = round;
+                this.userStates = new Map(userStates.map(deserializeUserState));
+                this.rng = randomSeed(this.config.seed);
+                while (this.currentLetter !== currentLetter) {
+                    this.generateLetter();
+                }
+                if (
+                    usedLetters.length !== this.usedLetters.size ||
+                    !usedLetters.every((letter) => this.usedLetters.has(letter))
+                ) {
+                    throw new Error("Inconsistent random seed. Wrong sequence of letters generated.");
+                }
+                this.state = state;
+            }),
+        );
+
+        this.peer.on("userreconnect", (user) => {
+            if (!this.peer?.isHost) {
+                return;
+            }
+            this.messageGameState?.send(
+                {
+                    config: this.config,
+                    state: this.state,
+                    deadline: this.deadline,
+                    round: this.round,
+                    userStates: Array.from(this.userStates.entries()).map(([userId, userState]) =>
+                        serializeUserState(userId, userState),
+                    ),
+                    currentLetter: this.currentLetter,
+                    usedLetters: Array.from(this.usedLetters.values()),
+                },
+                user.id,
+            );
         });
     }
 }

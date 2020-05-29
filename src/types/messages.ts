@@ -1,4 +1,7 @@
 import { GameConfig } from "./game-config";
+import { GameState } from "./game-state";
+import { Letter } from "./letter";
+import { SerializedUserState } from "../utils";
 
 export const enum ScoreType {
     NONE = 0,
@@ -18,6 +21,17 @@ export const enum MessageType {
     TOUCH_CATEGORY = "touch category",
     SKIP = "skip",
     ACCEPT_SCORING = "accept scoring",
+    GAME_STATE = "game state",
+}
+
+export interface MessageGameState {
+    config: GameConfig;
+    state: GameState;
+    deadline: number;
+    round: number;
+    userStates: SerializedUserState[];
+    currentLetter: Letter;
+    usedLetters: Letter[];
 }
 
 export interface MessageWelcome {

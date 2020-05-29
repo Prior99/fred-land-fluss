@@ -2,7 +2,7 @@
 
 .Lobby {
     &__idMessage {
-        width: 300px;
+        width: 800px;
         cursor: pointer;
         border-color: color("secondary1", 4) !important;
         color: color("secondary1", 0) !important;
@@ -14,6 +14,6 @@
 
     &__grid {
         width: 80vw;
-        max-width: 600px;
+        max-width: 800px;
     }
 }

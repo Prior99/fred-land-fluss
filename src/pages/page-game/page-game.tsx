@@ -2,17 +2,18 @@ import * as React from "react";
 import { addRoute, RouteProps } from "../../routing";
 import { external, inject } from "tsdi";
 import { observer } from "mobx-react";
-import { LobbyMode, GameState } from "../../types";
+import { LobbyMode, GameState, AppUser } from "../../types";
 import "./page-game.scss";
 import { Game } from "../../game";
 import { computed } from "mobx";
-import { GamePhaseCountdown, GamePhaseGuess, GamePhaseLobby, GamePhaseScoring } from "../../ui";
-import { GamePhaseScores } from "../../ui/game-phase-scores/game-phase-scores";
+import { GamePhaseCountdown, GamePhaseGuess, GamePhaseLobby, GamePhaseScoring, GamePhaseScores, DisconnectedModal  } from "../../ui";
 import { unreachable } from "../../utils";
+import { ReconnectModal, ConnectLoader } from "p2p-networking-semantic-ui-react";
 
 export interface PageGameProps {
     lobbyMode: LobbyMode;
-    id?: string;
+    peerId?: string;
+    userId?: string;
 }
 
 @external
@@ -21,10 +22,15 @@ export class PageGame extends React.Component<RouteProps<PageGameProps>> {
     @inject private game!: Game;
 
     async componentDidMount(): Promise<void> {
-        if (this.props.match.params.lobbyMode === LobbyMode.HOST) {
+        const { lobbyMode, peerId, userId } = this.props.match.params;
+        if (lobbyMode === LobbyMode.HOST) {
             await this.game.initialize();
         } else {
-            await this.game.initialize(this.props.match.params.id!);
+            if (userId) {
+                await this.game.initialize(peerId!, userId);
+            } else {
+                await this.game.initialize(peerId!);
+            }
         }
     }
 
@@ -50,6 +56,9 @@ export class PageGame extends React.Component<RouteProps<PageGameProps>> {
     public render(): JSX.Element {
         return (
             <div className="PageGame">
+                <DisconnectedModal />
+                <ReconnectModal peer={this.game.peer} />
+                <ConnectLoader peer={this.game.peer} />
                 {this.component}
             </div>
         );
@@ -57,14 +66,17 @@ export class PageGame extends React.Component<RouteProps<PageGameProps>> {
 }
 
 export const routeGame = addRoute<PageGameProps>({
-    path: (lobbyMode: LobbyMode, id?: string) => {
+    path: (lobbyMode: LobbyMode, peerId?: string, userId?: string) => {
         switch (lobbyMode) {
             case LobbyMode.CLIENT:
-                return `/game/client/${id}`;
+                if (userId) {
+                    return `/game/client/${peerId}/${userId}`;
+                }
+                return `/game/client/${peerId}`;
             case LobbyMode.HOST:
                 return `/game/host`;
         }
     },
-    pattern: "/game/:lobbyMode/:id?",
+    pattern: "/game/:lobbyMode/:peerId?/:userId?",
     component: PageGame,
 });

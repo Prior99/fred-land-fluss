@@ -101,7 +101,6 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
                                                             <Form.Field error={category.length === 0}>
                                                                 <label>Category {index + 1}</label>
                                                                 <Input
-                                                                    onUnfocus={this.handleUnfocus}
                                                                     ref={(input) =>
                                                                         this.focus &&
                                                                         index ===
