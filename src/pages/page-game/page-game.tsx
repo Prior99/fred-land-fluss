@@ -10,6 +10,8 @@ import { GamePhaseCountdown, GamePhaseGuess, GamePhaseLobby, GamePhaseScoring, G
 import { unreachable } from "../../utils";
 import { ReconnectModal, ConnectLoader } from "p2p-networking-semantic-ui-react";
 
+declare const SOFTWARE_VERSION: string;
+
 export interface PageGameProps {
     lobbyMode: LobbyMode;
     peerId?: string;

@@ -8,6 +8,9 @@ import { Game, LoadingFeatures } from "../../game";
 import "./game-phase-lobby.scss";
 import { NetworkMode } from "p2p-networking";
 import { IdMessage, UserTable } from "p2p-networking-semantic-ui-react";
+import classNames from "classnames";
+
+declare const SOFTWARE_VERSION: string;
 
 export interface GamePhaseLobbyProps {
     className?: string;
@@ -66,7 +69,7 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
 
     public render(): JSX.Element {
         return (
-            <MenuContainer className={this.props.className}>
+            <MenuContainer className={classNames("Lobby", this.props.className)}>
                 <Grid className="Lobby__grid">
                     <Grid.Row>
                         <Grid.Column>
@@ -199,6 +202,7 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
                         </Grid.Column>
                     </Grid.Row>
                 </Grid>
+                <div className="Lobby__version">{`Version #${SOFTWARE_VERSION}`}</div>
             </MenuContainer>
         );
     }

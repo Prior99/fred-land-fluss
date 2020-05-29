@@ -1,6 +1,10 @@
 @import "../../variables.scss";
 
 .Lobby {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
     &__idMessage {
         width: 800px;
         cursor: pointer;
@@ -15,5 +19,14 @@
     &__grid {
         width: 80vw;
         max-width: 800px;
+    }
+
+    &__version {
+        opacity: 0.5;
+        width: 800px;
+        padding-right: 3em;
+        margin-top: $gutter;
+        text-align: right;
+        font-style: italic;
     }
 }

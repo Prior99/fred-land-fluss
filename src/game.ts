@@ -27,6 +27,8 @@ import {
 import { v4 } from "uuid";
 import { allLetters, deserializeUserState, serializeUserState } from "./utils";
 
+declare const SOFTWARE_VERSION: string;
+
 export interface Score {
     rank: number;
     score: number;
@@ -415,7 +417,7 @@ export class Game {
 
     @action.bound public async initialize(networkId?: string, userId?: string): Promise<void> {
         const options: PeerOptions<AppUser> = {
-            applicationProtocolVersion: "0.0.0",
+            applicationProtocolVersion: `${SOFTWARE_VERSION}`,
             peerJsOptions: {
                 host: "peerjs.92k.de",
                 secure: true,
