@@ -22,7 +22,7 @@ module.exports = {
     module: {
         rules: [
             {
-                test: /\.(woff|woff2|ttf|png|svg|ttf|eot)$/,
+                test: /\.(woff|woff2|ttf|png|svg|ttf|eot|mp3)$/,
                 loader: "file-loader",
                 options: {
                     name: "[name].[ext]",

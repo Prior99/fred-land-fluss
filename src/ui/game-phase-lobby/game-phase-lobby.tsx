@@ -1,4 +1,7 @@
 import * as React from "react";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { Slider } from "react-semantic-ui-range";
 import { external, inject } from "tsdi";
 import { Segment, Form, Input, Grid, Button } from "semantic-ui-react";
 import { computed, action, observable } from "mobx";
@@ -9,6 +12,8 @@ import "./game-phase-lobby.scss";
 import { NetworkMode } from "p2p-networking";
 import { IdMessage, UserTable } from "p2p-networking-semantic-ui-react";
 import classNames from "classnames";
+import { Settings } from "../../settings";
+import { audioTickOwn, Audios } from "../../audio";
 
 declare const SOFTWARE_VERSION: string;
 
@@ -20,9 +25,20 @@ export interface GamePhaseLobbyProps {
 @observer
 export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
     @inject private game!: Game;
+    @inject private settings!: Settings;
+    @inject private audios!: Audios;
 
     @observable private focus = false;
     @observable private inputName: string | undefined;
+
+    @computed private get volume(): number {
+        return this.settings.volume * 100;
+    }
+
+    @action.bound private handleVolumeChange(value: number): void {
+        this.settings.volume = value / 100;
+        this.audios.play(audioTickOwn);
+    }
 
     @action.bound private handleStartClick(): void {
         this.game.sendStartGame();
@@ -86,12 +102,27 @@ export class GamePhaseLobby extends React.Component<GamePhaseLobbyProps> {
                                     <Grid>
                                         <Grid.Row>
                                             <Grid.Column>
+                                                <Form.Field>
+                                                    <label>Volume</label>
+                                                    <Slider
+                                                        color="blue"
+                                                        settings={{
+                                                            start: this.volume,
+                                                            min: 0,
+                                                            max: 100,
+                                                            step: 1,
+                                                            onChange: this.handleVolumeChange,
+                                                        }}
+                                                    />
+                                                </Form.Field>
+                                            </Grid.Column>
+                                        </Grid.Row>
+
+                                        <Grid.Row>
+                                            <Grid.Column>
                                                 <Form.Field error={!this.nameValid}>
                                                     <label>Change name</label>
-                                                    <Input
-                                                        value={this.name}
-                                                        onChange={this.handleNameChange}
-                                                    />
+                                                    <Input value={this.name} onChange={this.handleNameChange} />
                                                 </Form.Field>
                                             </Grid.Column>
                                         </Grid.Row>

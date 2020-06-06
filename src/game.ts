@@ -3,7 +3,7 @@ import NomineLipsum from "nomine-lipsum";
 import { MessageFactory, PeerOptions } from "p2p-networking";
 import { ObservablePeer, createObservableClient, createObservableHost } from "p2p-networking-mobx";
 import { computed, action, observable } from "mobx";
-import { component } from "tsdi";
+import { component, inject } from "tsdi";
 import {
     GameConfig,
     GameState,
@@ -26,6 +26,21 @@ import {
 } from "./types";
 import { v4 } from "uuid";
 import { allLetters, deserializeUserState, serializeUserState } from "./utils";
+import {
+    Audios,
+    audioStartGame,
+    audioPass,
+    audioUnpass,
+    audioCountdown,
+    audioTickOwn,
+    audioTickOtherPlayer,
+    audioFinishedFirst,
+    audioFinishedOther,
+    audioAcceptWaiting,
+    audioAcceptSelf,
+    audioAcceptOther,
+    audioAcceptReset,
+} from "./audio";
 
 declare const SOFTWARE_VERSION: string;
 
@@ -56,6 +71,8 @@ export interface UserState {
 
 @component
 export class Game {
+    @inject private audios!: Audios;
+
     @observable.ref public peer: ObservablePeer<AppUser, MessageType> | undefined = undefined;
     @observable public config: GameConfig = {
         seed: v4(),
@@ -324,6 +341,7 @@ export class Game {
         }
         this.state = GameState.GUESS;
         this.deadline = Date.now() + 8000;
+        setTimeout(() => this.audios.play(audioCountdown), 1000);
         const interval = setInterval(() => {
             this.now = Date.now();
             if (!this.inCountdown) {
@@ -445,6 +463,11 @@ export class Game {
         this.messageGameState = this.peer.message<MessageGameState>(MessageType.GAME_STATE);
 
         this.messageSkipTurn.subscribe(({ skipped }, userId) => {
+            if (skipped) {
+                this.audios.play(audioPass);
+            } else {
+                this.audios.play(audioUnpass);
+            }
             this.userStates.get(userId)!.skipped = skipped;
             if (this.allSkipped) {
                 this.endRound();
@@ -456,6 +479,11 @@ export class Game {
         });
         this.messageTouchCategory.subscribe(({ category }, userId) => {
             this.userStates.get(userId)?.touchedCategories.add(category);
+            if (userId === this.userId) {
+                this.audios.play(audioTickOwn);
+            } else {
+                this.audios.play(audioTickOtherPlayer);
+            }
         });
         this.messageChangeConfig.subscribe(({ config }) => (this.config = config));
         this.messageStartGame.subscribe(({ config }) => {
@@ -470,8 +498,13 @@ export class Game {
             this.round++;
             this.startTurn();
         });
-        this.messageEndRound.subscribe(() => {
+        this.messageEndRound.subscribe((_, userId) => {
             this.endRound();
+            if (userId === this.userId) {
+                this.audios.play(audioFinishedFirst);
+            } else {
+                this.audios.play(audioFinishedOther);
+            }
         });
         this.messageSolution.subscribe(({ solution }, userId) => {
             this.userStates.get(userId)!.solutions = new Map(solution);
@@ -482,13 +515,24 @@ export class Game {
         });
         this.messageScoreWord.subscribe(({ userId, category, scoreType }) => {
             this.userStates.get(userId)?.currentScores.set(category, scoreType);
+            this.audios.play(audioAcceptReset);
             for (const state of this.userStates.values()) {
                 state.hasAcceptedScore = false;
             }
         });
         this.messageAcceptScoring.subscribe((_, userId) => {
             this.userStates.get(userId)!.hasAcceptedScore = true;
-            if (!this.userList.every(({ id }) => this.userStates.get(id)?.hasAcceptedScore)) {
+            const haveNotAccepted = this.userList.filter(({ id }) => !this.userStates.get(id)?.hasAcceptedScore);
+            if (haveNotAccepted.length === 1 && haveNotAccepted[0].id === this.userId) {
+                this.audios.play(audioAcceptWaiting);
+            } else {
+                if (userId === this.userId) {
+                    this.audios.play(audioAcceptSelf);
+                } else {
+                    this.audios.play(audioAcceptOther);
+                }
+            }
+            if (haveNotAccepted.length !== 0) {
                 return;
             }
             for (const [_userId, state] of this.userStates) {

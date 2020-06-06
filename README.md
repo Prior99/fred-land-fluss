@@ -1,18 +1,18 @@
 # Fred, Land, Fluss
 
-<img align="right" width="200" height="200" src="https://raw.githubusercontent.com/Prior99/fred-land-fluss/master/images/logo.png">
+<img align="right" width="200" height="200" src="https://raw.githubusercontent.com/Prior99/fred-land-fluss/master/assets/logo.png">
 
 [![pipeline status](https://gitlab.com/prior99/fred-land-fluss/badges/master/pipeline.svg)](https://github.com/Prior99/fred-land-fluss)
 
 A multiplayer clone of the well-known game written in Typescript.
 The game uses WebRTC Data channels for true serverless multiplayer in the browser (Peer-To-Peer).
 
-[![play](https://raw.githubusercontent.com/Prior99/fred-land-fluss/master/images/play.png)](https://prior99.gitlab.io/fred-land-fluss)
+[![play](https://raw.githubusercontent.com/Prior99/fred-land-fluss/master/assets/play.png)](https://prior99.gitlab.io/fred-land-fluss)
 
 # Features
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Prior99/fred-land-fluss/master/images/screenshot-1.png">
+    <img src="https://raw.githubusercontent.com/Prior99/fred-land-fluss/master/assets/screenshot-1.png">
 </p>
 
 The following is implemented:
